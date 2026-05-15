@@ -1,0 +1,227 @@
+DOKUMENTASI INSTALL & SETUP (PINDAH PC) - E-commerceV2
+======================================================
+
+Ringkasan Project
+-----------------
+Project ini terdiri dari 2 aplikasi utama:
+1) CMS (Laravel)   : apps/cms-laravel         -> jalan di http://localhost:8000
+2) Frontend (Next) : apps/marketplace-next   -> jalan di http://localhost:4321
+
+CMS Laravel punya halaman admin:
+- Login  : http://localhost:8000/login
+- Admin  : http://localhost:8000/dashboard   (HANYA role ADMIN)
+
+
+0) Kebutuhan Aplikasi (Wajib)
+-----------------------------
+Windows 10/11 (disarankan).
+
+A. Git
+   - Download & install: https://git-scm.com/downloads
+   - Cek:
+     git --version
+
+B. PHP (WAJIB) - Minimal PHP 8.3.x
+   - Project Laravel di repo ini butuh PHP: ^8.3 (lihat apps/cms-laravel/composer.json)
+   - Download PHP Windows:
+     https://windows.php.net/download/
+     Pilih "VS16 x64 Thread Safe" (umumnya paling aman untuk development).
+   - Extract ke folder misalnya:
+     C:\php
+   - Tambahkan PATH:
+     System Properties -> Environment Variables -> Path -> tambah: C:\php
+   - Cek:
+     php -v
+
+C. Composer (WAJIB)
+   - Download & install:
+     https://getcomposer.org/download/
+   - Cek:
+     composer -V
+
+D. Node.js (WAJIB)
+   - Disarankan Node LTS (minimal Node 18+, ideal Node 20+)
+   - Download:
+     https://nodejs.org/en/download
+   - Cek:
+     node -v
+     npm -v
+
+E. (Opsional tapi disarankan) VS Code
+   - https://code.visualstudio.com/
+
+
+1) Konfigurasi PHP (php.ini) yang Perlu Diaktifkan
+--------------------------------------------------
+Setelah install PHP, bikin/siapkan php.ini:
+1) Di folder PHP (mis. C:\php) cari:
+   - php.ini-development atau php.ini-production
+2) Copy salah satu jadi:
+   - php.ini
+
+Lalu buka php.ini, pastikan extension_dir benar (biasanya sudah benar):
+   extension_dir = "ext"
+
+Uncomment / aktifkan extension berikut (hapus tanda ; di depannya):
+   extension=curl
+   extension=fileinfo
+   extension=mbstring
+   extension=openssl
+   extension=pdo_sqlite
+   extension=sqlite3
+   extension=zip
+
+Tambahan yang sering dibutuhkan (disarankan):
+   extension=intl
+
+Catatan:
+- Kalau Composer error SSL (certificate problem), download cacert.pem lalu set:
+  curl.cainfo="C:\php\cacert.pem"
+  openssl.cafile="C:\php\cacert.pem"
+  (cacert.pem bisa diambil dari: https://curl.se/ca/cacert.pem)
+
+Cek extension sudah aktif:
+   php -m
+
+
+2) Cara Download Project
+------------------------
+Opsi A (paling enak): Git Clone
+1) Buka PowerShell
+2) Masuk folder kerja, mis:
+   cd C:\Projects
+3) Clone (contoh):
+   git clone <URL_REPO_KAMU> E-commerceV2
+4) Masuk project:
+   cd E-commerceV2
+
+Opsi B: Download ZIP
+1) Download ZIP repo
+2) Extract ke folder:
+   C:\Projects\E-commerceV2
+
+
+3) Setup CMS Laravel (PORT 8000)
+--------------------------------
+Lokasi:
+   apps/cms-laravel
+
+3.1 Install dependency PHP (Composer)
+1) Buka PowerShell terminal baru:
+   cd C:\Projects\E-commerceV2\apps\cms-laravel
+2) Install:
+   composer install
+
+3.2 Setup environment (.env) & Key
+1) Kalau belum ada .env:
+   copy .env.example .env
+2) Generate key:
+   php artisan key:generate
+
+3.3 Database (SQLite)
+Project pakai SQLite.
+1) Pastikan file sqlite ada:
+   database/database.sqlite
+   Kalau belum ada, buat file kosong:
+   New-Item -ItemType File -Force database\database.sqlite
+2) Jalankan migrasi:
+   php artisan migrate
+
+3.4 Install dependency Frontend Laravel (Vite/Tailwind)
+1) Install:
+   npm install
+
+3.5 Jalanin CMS (2 terminal)
+Terminal A (Laravel server):
+   php artisan serve --port 8000
+
+Terminal B (Vite dev server, kalau butuh asset live reload):
+   npm run dev
+
+3.6 Login Admin CMS (Role ADMIN)
+Buka:
+   http://localhost:8000/login
+
+Admin default (bisa diganti di apps/cms-laravel/.env):
+   ADMIN_EMAIL=admin@rizalstudio.test
+   ADMIN_PASSWORD=admin12345
+
+Catatan role:
+- Route /dashboard diproteksi middleware "admin" dan hanya role ADMIN yang bisa akses.
+
+
+4) Setup Frontend Next.js (PORT 4321)
+-------------------------------------
+Lokasi:
+   apps/marketplace-next
+
+4.1 Install dependency Node
+1) Buka PowerShell terminal baru:
+   cd C:\Projects\E-commerceV2\apps\marketplace-next
+2) Install:
+   npm install
+
+4.2 Setup environment Next (.env.local)
+Buat file baru:
+   apps/marketplace-next/.env.local
+
+Isi minimal (wajib):
+   NEXT_PUBLIC_CMS_URL=http://127.0.0.1:8000
+   DATABASE_URL="file:./dev.db"
+
+4.3 Setup Prisma (SQLite)
+1) Generate client:
+   npx prisma generate
+2) Jalankan migration yang sudah ada:
+   npx prisma migrate dev
+
+4.4 Jalankan Next
+   npm run dev
+
+Buka:
+   http://localhost:4321
+
+
+5) Cara Pindah PC (Checklist Cepat)
+-----------------------------------
+1) Install: Git + PHP 8.3 + Composer + Node LTS
+2) Aktifkan extension php.ini (curl, mbstring, openssl, pdo_sqlite, sqlite3, fileinfo, zip, intl)
+3) Clone repo ke PC baru
+4) CMS Laravel:
+   - composer install
+   - copy .env.example .env (kalau perlu)
+   - php artisan key:generate
+   - buat database/database.sqlite
+   - php artisan migrate
+   - npm install
+   - php artisan serve --port 8000
+   - (opsional) npm run dev
+5) Next:
+   - npm install
+   - buat .env.local (NEXT_PUBLIC_CMS_URL + DATABASE_URL)
+   - npx prisma migrate dev
+   - npm run dev (port 4321)
+
+
+6) Troubleshooting Cepat
+------------------------
+A) PHP versi salah
+   - Error composer biasanya bilang butuh PHP ^8.3
+   - Solusi: install PHP 8.3.x dan pastikan PATH mengarah ke php yang benar.
+   - Cek:
+     where php
+     php -v
+
+B) SQLite error
+   - Pastikan extension pdo_sqlite & sqlite3 aktif di php.ini
+   - Pastikan file database/database.sqlite (CMS) & dev.db (Next) bisa dibuat.
+
+C) Port sudah kepakai
+   - CMS: ganti port:
+     php artisan serve --port 8001
+   - Next: ubah scripts atau jalankan:
+     npx next dev --port 4322
+
+D) Login admin CMS tidak bisa
+   - Pastikan ADMIN_EMAIL & ADMIN_PASSWORD ada di apps/cms-laravel/.env
+   - Coba restart server Laravel setelah ubah .env
