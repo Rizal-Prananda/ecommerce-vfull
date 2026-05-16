@@ -1,23 +1,11 @@
 ---
-import '../styles/global.css';
-import Navbar from '../components/Navbar.jsx';
+import Layout from '../layouts/Layout.astro';
 
-const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8000';
+const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001';
 ---
 
-<html lang="id" class="h-full">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>E-Commerce</title>
-	</head>
-	<body class="min-h-full">
-		<Navbar client:load />
-
-		<main class="mx-auto w-full max-w-6xl px-4">
+<Layout title="E-Commerce">
+	<main class="mx-auto w-full max-w-6xl px-4">
 			<section id="home" class="relative overflow-hidden py-14 md:py-20">
 				<div class="grid gap-10 md:grid-cols-2 md:items-center">
 					<div class="flex flex-col gap-6">
@@ -41,8 +29,8 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8000';
 							>
 								Lihat Profil
 							</a>
-							<a
-								href={`${CMS_URL}/dashboard`}
+						<a
+							href={`${CMS_URL}/login`}
 								class="inline-flex h-12 items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
 							>
 								Ke Dashboard CMS
@@ -177,7 +165,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8000';
 							</div>
 							<div class="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm">
 								<div class="text-sm font-semibold text-slate-900">Siap Marketplace</div>
-								<div class="mt-1 text-xs leading-5 text-slate-600">Marketplace dibuat di Next.js.</div>
+								<div class="mt-1 text-xs leading-5 text-slate-600">Marketplace tersedia langsung di website ini.</div>
 							</div>
 						</div>
 					</div>
@@ -191,7 +179,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8000';
 						<p class="mt-1 text-sm text-slate-600">Testimoni diambil dari CMS Laravel.</p>
 					</div>
 					<a
-						href={`${CMS_URL}/dashboard`}
+						href={`${CMS_URL}/login`}
 						class="hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50 md:inline-flex"
 					>
 						Kelola di CMS
@@ -273,13 +261,13 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8000';
 					</div>
 					<div class="flex gap-2 md:justify-end">
 						<a
-							href="http://localhost:3000"
+							href="/marketplace"
 							class="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
 						>
 							Lihat Marketplace
 						</a>
 						<a
-							href={`${CMS_URL}/dashboard`}
+							href={`${CMS_URL}/login`}
 							class="inline-flex h-11 items-center justify-center rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
 						>
 							Kelola CMS
@@ -345,11 +333,10 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8000';
 			</section>
 		</main>
 
-		<footer class="mt-10 border-t border-slate-200/70 bg-white/60">
+	<footer class="mt-10 border-t border-slate-200/70 bg-white/60">
 			<div class="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-8 md:flex-row md:items-center md:justify-between">
 				<div class="text-sm font-semibold text-slate-900">Rizal Studio</div>
-				<div class="text-xs text-slate-600">Astro • AngularJS • Next.js • Laravel • TailwindCSS</div>
+				<div class="text-xs text-slate-600">Astro • Laravel • TailwindCSS</div>
 			</div>
-		</footer>
-	</body>
-</html>
+	</footer>
+</Layout>

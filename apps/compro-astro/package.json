@@ -1,5 +1,6 @@
 {
   "name": "apps-compro-astro",
+  "private": true,
   "type": "module",
   "version": "0.0.1",
   "engines": {
@@ -9,10 +10,13 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "prisma:generate": "prisma generate",
+    "postinstall": "npm run prisma:generate"
   },
   "dependencies": {
     "@astrojs/react": "^5.0.5",
+    "@prisma/client": "^6.19.3",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",
@@ -20,10 +24,15 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "astro": "^6.3.3",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jose": "^6.2.3",
+    "lucide-react": "^0.469.0",
+    "prisma": "^6.19.3",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "react-hot-toast": "^2.6.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0"
   }

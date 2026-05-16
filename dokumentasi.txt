@@ -182,6 +182,8 @@ Catatan:
 4.3 Setup Prisma (SQLite)
 1) Generate client (otomatis juga jalan setelah npm install, tapi aman dijalankan manual):
    npm run prisma:generate
+2) Buat table SQLite (sekali saja):
+   npx prisma db push
 
 4.4 Jalankan Astro
    npm run dev

@@ -86,3 +86,7 @@ Route::get('/dashboard', function () {
 
     return view('dashboard', compact('metrics', 'activeOrders', 'actionItems'));
 })->middleware('admin');
+
+Route::get('/dashboard/chat', [\App\Http\Controllers\ChatAdminController::class, 'listConversations'])->middleware('admin');
+Route::get('/dashboard/chat/{conversationId}', [\App\Http\Controllers\ChatAdminController::class, 'viewConversation'])->middleware('admin');
+Route::post('/dashboard/chat/{conversationId}/reply', [\App\Http\Controllers\ChatAdminController::class, 'reply'])->middleware('admin');

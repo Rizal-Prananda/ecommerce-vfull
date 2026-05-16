@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Pelanggan {
+  id_pelanggan          Int       @id @default(autoincrement())
+  namalengkap_pelanggan String
+  email_pelanggan       String    @unique
+  notelepon_pelanggan   String?
+  password              String
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt @map("last_update")
+  passwordUpdatedAt     DateTime? @map("last_update_password")
+
+  chats Chat[]
+}
+
+model Chat {
+  id_chat      Int      @id @default(autoincrement())
+  id_pelanggan Int
+  pengirim     String
+  pesan        String
+  dibaca_admin Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  pelanggan Pelanggan @relation(fields: [id_pelanggan], references: [id_pelanggan])
+
+  @@index([id_pelanggan, createdAt])
+}
