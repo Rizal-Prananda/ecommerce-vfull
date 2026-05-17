@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="id" class="h-full">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Users - Rizal CMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="h-screen bg-slate-50 text-slate-900">
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
+        #cms-admin {
+            --cms-bg: #0a0a0a;
+            --cms-bg-hover: rgba(255, 255, 255, 0.05);
+            --cms-border: rgba(255, 255, 255, 0.08);
+            --cms-text: #a1a1aa;
+            --cms-text-active: #fafafa;
+            --cms-primary: #3b82f6;
+        }
+
+        #cms-admin .cms-sidebar {
+            background: var(--cms-bg) !important;
+            border-right: 1px solid var(--cms-border) !important;
+        }
+
+        #cms-admin .cms-sidebar-header {
+            background: transparent !important;
+            border-bottom: 1px solid var(--cms-border) !important;
+        }
+
+        #cms-admin .cms-menu-item {
+            color: var(--cms-text) !important;
+        }
+
+        #cms-admin .cms-menu-item:hover {
+            background: var(--cms-bg-hover) !important;
+            color: var(--cms-text-active) !important;
+        }
+
+        #cms-admin .cms-menu-active {
+            background: rgba(59, 130, 246, 0.12) !important;
+            color: #60a5fa !important;
+            border-left: 2px solid var(--cms-primary) !important;
+            box-shadow: none !important;
+        }
+    </style>
+
+    @php
+        $roles = $roles ?? ['ADMIN', 'CS', 'TEKNISI', 'USER'];
+        $q = trim((string) request()->query('q', ''));
+        $roleFilter = strtoupper(trim((string) request()->query('role', '')));
+        $exportUrl = '/dashboard/users/export?' . http_build_query(['q' => $q, 'role' => $roleFilter]);
+
+        $roleBadge = function ($role) {
+            $r = strtoupper((string) $role);
+            return match ($r) {
+                'ADMIN' => 'bg-red-100 text-red-800',
+                'TEKNISI' => 'bg-blue-100 text-blue-800',
+                'CS' => 'bg-green-100 text-green-800',
+                default => 'bg-gray-100 text-gray-800',
+            };
+        };
+
+        $avatarSrc = function ($path) {
+            $p = trim((string) $path);
+            if ($p === '') return '';
+            if (str_starts_with($p, 'http')) return $p;
+            if (str_starts_with($p, '/uploads/') || str_starts_with($p, 'uploads/')) return asset(ltrim($p, '/'));
+            if (str_starts_with($p, 'avatars/')) return asset('storage/' . $p);
+            return asset('storage/' . ltrim($p, '/'));
+        };
+    @endphp
+
+    <div
+        id="cms-admin"
+        class="h-screen flex"
+        x-data="{
+            sidebarOpen: true,
+            openSubmenu: 'produk',
+            addOpen: false,
+            editOpen: false,
+            editUserId: null,
+            editForm: { name: '', email: '', role: 'USER', password: '', password_confirmation: '' },
+            editingUser: null,
+            showEditModal: false,
+            openEdit(user) {
+                this.editingUser = user;
+                this.showEditModal = true;
+                this.editUserId = user?.id ?? null;
+                this.editForm = {
+                    name: user?.name ?? '',
+                    email: user?.email ?? '',
+                    role: user?.role ?? 'USER',
+                    password: '',
+                    password_confirmation: ''
+                };
+                this.editOpen = true;
+            },
+            closeDialogs() {
+                this.addOpen = false;
+                this.editOpen = false;
+                this.showEditModal = false;
+                this.editingUser = null;
+            }
+        }"
+        @keydown.escape.window="closeDialogs()"
+        @open-edit.window="openEdit($event.detail)"
+    >
+        <aside
+            class="cms-sidebar sticky top-0 z-40 hidden h-screen flex-col relative transition-all duration-300 ease-out md:flex"
+            :class="sidebarOpen ? 'w-64' : 'w-20'">
+            <button type="button" @click="sidebarOpen = !sidebarOpen"
+                class="absolute -right-3 top-6 grid h-6 w-6 place-items-center rounded-full border border-gray-200 bg-white text-slate-900 shadow-sm"
+                aria-label="Toggle sidebar">
+                <svg class="size-4 transition-transform" :class="sidebarOpen ? '' : 'rotate-180'" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6" />
+                </svg>
+            </button>
+
+            <div class="cms-sidebar-header flex h-16 items-center px-4">
+                <div class="flex w-full items-center gap-3" :class="sidebarOpen ? '' : 'justify-center'">
+                    <div
+                        class="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20">
+                        R</div>
+                    <div x-show="sidebarOpen" x-transition.opacity.duration.300ms class="leading-tight" x-cloak>
+                        <div class="text-sm font-semibold text-white">Rizal CMS</div>
+                        <div class="text-xs text-slate-400">Dashboard</div>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-3 py-4 text-sm font-medium">
+                <div class="space-y-1">
+                    <a href="/dashboard"
+                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard') ? 'cms-menu-active' : '' }}">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M3 13h8V3H3v10Z" />
+                            <path d="M13 21h8V11h-8v10Z" />
+                            <path d="M13 3h8v6h-8V3Z" />
+                            <path d="M3 17h8v4H3v-4Z" />
+                        </svg>
+                        <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Dashboard</span>
+                        <div x-show="!sidebarOpen" x-transition x-cloak
+                            class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                            Dashboard
+                        </div>
+                    </a>
+
+                    <a href="/dashboard/users"
+                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard/users*') ? 'cms-menu-active' : '' }}">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Kelola Pengguna</span>
+                        <div x-show="!sidebarOpen" x-transition x-cloak
+                            class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                            Kelola Pengguna
+                        </div>
+                    </a>
+
+                    <a href="/dashboard/chat"
+                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard/chat*') ? 'cms-menu-active' : '' }}">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" />
+                        </svg>
+                        <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Chat Pelanggan</span>
+                        <div x-show="!sidebarOpen" x-transition x-cloak
+                            class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                            Chat Pelanggan
+                        </div>
+                    </a>
+
+                    <div class="space-y-1">
+                        <button type="button" @click="openSubmenu === 'produk' ? openSubmenu = null : openSubmenu = 'produk'"
+                            class="group relative cms-menu-item flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200">
+                            <span class="flex items-center gap-3">
+                                <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 8" />
+                                    <path d="M21 12a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 12" />
+                                </svg>
+                                <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Produk</span>
+                                <div x-show="!sidebarOpen" x-transition x-cloak
+                                    class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                                    Produk
+                                </div>
+                            </span>
+                            <svg x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak class="size-4 transition-transform"
+                                :class="openSubmenu === 'produk' && 'rotate-180'" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+
+                        <div x-show="openSubmenu === 'produk' && sidebarOpen" x-collapse x-cloak class="pl-3">
+                            <div class="mt-1 space-y-1">
+                                <a href="/api/products"
+                                    class="cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200">
+                                    <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M3 6h18" />
+                                        <path d="M3 12h18" />
+                                        <path d="M3 18h18" />
+                                    </svg>
+                                    <span>Semua Produk</span>
+                                </a>
+                                <a href="/api/categories"
+                                    class="cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200">
+                                    <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M3 3h7v7H3V3Z" />
+                                        <path d="M14 3h7v7h-7V3Z" />
+                                        <path d="M14 14h7v7h-7v-7Z" />
+                                        <path d="M3 14h7v7H3v-7Z" />
+                                    </svg>
+                                    <span>Kategori</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="/api/testimonials"
+                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" />
+                        </svg>
+                        <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Testimoni</span>
+                        <div x-show="!sidebarOpen" x-transition x-cloak
+                            class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                            Testimoni
+                        </div>
+                    </a>
+
+                    <a href="/api/recommendations"
+                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 17.27 18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27Z" />
+                        </svg>
+                        <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Rekomendasi</span>
+                        <div x-show="!sidebarOpen" x-transition x-cloak
+                            class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                            Rekomendasi
+                        </div>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="border-t border-[var(--cms-border)] p-4"></div>
+        </aside>
+
+        <div class="flex min-w-0 flex-1 flex-col">
+            <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white px-6">
+                <div class="flex shrink-0 items-center gap-3 ml-auto">
+                    @php
+                        $me = auth()->user();
+                        $meAvatarPath = (string) ($me?->avatar_path ?? '');
+                        $meAvatarLegacy = (string) ($me?->avatar ?? '');
+                        $meAvatarUrl = '';
+                        if ($meAvatarPath !== '') {
+                            $meAvatarUrl = $avatarSrc($meAvatarPath);
+                        } elseif ($meAvatarLegacy !== '') {
+                            $meAvatarUrl = str_starts_with($meAvatarLegacy, 'http') ? $meAvatarLegacy : asset(ltrim($meAvatarLegacy, '/'));
+                        } else {
+                            $nameForAvatar = trim((string) ($me?->name ?? 'Admin'));
+                            $meAvatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($nameForAvatar) . '&background=0f172a&color=ffffff&bold=true&size=128';
+                        }
+                    @endphp
+
+                    <div x-data="{ open: false }" class="relative">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="flex items-center gap-3 rounded-full bg-white pl-1 pr-3 py-1 shadow-sm ring-1 ring-black/5 hover:bg-slate-50"
+                            :aria-expanded="open"
+                            aria-haspopup="menu"
+                        >
+                            <img
+                                src="{{ $meAvatarUrl }}"
+                                alt="{{ $me?->name ?? 'Admin' }}"
+                                class="size-9 rounded-full object-cover bg-slate-900 ring-2 ring-slate-100"
+                            />
+                            <span class="hidden text-sm font-semibold text-slate-900 sm:block">{{ $me?->name ?? 'Admin' }}</span>
+                            <svg class="size-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            x-cloak
+                            @click.outside="open = false"
+                            @keydown.escape.window="open = false"
+                            x-transition:enter="transition ease-out duration-120"
+                            x-transition:enter-start="transform opacity-0 scale-95"
+                            x-transition:enter-end="transform opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="transform opacity-100 scale-100"
+                            x-transition:leave-end="transform opacity-0 scale-95"
+                            class="absolute right-0 z-50 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-black/5"
+                            role="menu"
+                        >
+                            <div class="py-1">
+                                <a
+                                    href="{{ route('profile.edit') }}"
+                                    @click.stop
+                                    class="flex w-full items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                    role="menuitem"
+                                    @click="open = false"
+                                >
+                                    Update Profile
+                                </a>
+
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button
+                                        type="submit"
+                                        class="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                        role="menuitem"
+                                    >
+                                        Logout
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="min-w-0 flex-1 overflow-y-auto bg-slate-50">
+                <div class="w-full px-4 py-6 sm:px-6">
+                    <div class="mb-4 text-sm text-slate-500">
+                        <a href="/dashboard" class="hover:text-slate-900">Dashboard</a>
+                        <span class="mx-2">/</span>
+                        <span class="text-slate-900">Users</span>
+                    </div>
+
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Users</h1>
+                            <p class="mt-1 text-sm text-slate-600">Manage users, roles, and access.</p>
+                        </div>
+                        <button
+                            type="button"
+                            @click="addOpen = true"
+                            class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                        >
+                            Add User
+                        </button>
+                    </div>
+
+                    @if (session('success'))
+                        <div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+                    @if (session('error'))
+                        <div class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+                    @if ($errors->any())
+                        <div class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                            <ul class="list-disc space-y-1 pl-5">
+                                @foreach ($errors->all() as $e)
+                                    <li>{{ $e }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    <section class="mt-6 rounded-lg border border-slate-200 bg-white shadow isolate">
+                        <div class="sticky top-0 z-10 border-b border-slate-200 bg-white/85 backdrop-blur">
+                            <div class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                <form method="GET" action="/dashboard/users" class="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+                                    <div class="relative w-full sm:max-w-sm">
+                                        <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 21l-4.3-4.3" />
+                                            <circle cx="11" cy="11" r="7" />
+                                        </svg>
+                                        <input
+                                            name="q"
+                                            value="{{ $q }}"
+                                            placeholder="Search users..."
+                                            class="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-10 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200"
+                                        />
+                                    </div>
+
+                                    <select
+                                        name="role"
+                                        class="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200 sm:w-48"
+                                    >
+                                        <option value="">All roles</option>
+                                        @foreach ($roles as $r)
+                                            <option value="{{ $r }}" {{ $roleFilter === $r ? 'selected' : '' }}>{{ $r }}</option>
+                                        @endforeach
+                                    </select>
+
+                                    <div class="flex gap-2">
+                                        <button
+                                            type="submit"
+                                            class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+                                        >
+                                            Apply
+                                        </button>
+                                        <a
+                                            href="{{ $exportUrl }}"
+                                            class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+                                        >
+                                            Export
+                                        </a>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        @if ($users->isEmpty())
+                            <div class="grid place-items-center px-6 py-16">
+                                <div class="mx-auto max-w-sm text-center">
+                                    <div class="mx-auto grid size-12 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700">
+                                        <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                            <circle cx="9" cy="7" r="4" />
+                                            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                        </svg>
+                                    </div>
+                                    <div class="mt-4 text-base font-semibold text-slate-900">No users yet</div>
+                                    <div class="mt-1 text-sm text-slate-600">Create your first user to get started.</div>
+                                    <button
+                                        type="button"
+                                        @click="addOpen = true"
+                                        class="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                                    >
+                                        Add User
+                                    </button>
+                                </div>
+                            </div>
+                        @else
+                            <div class="md:hidden divide-y divide-slate-200">
+                                @foreach ($users as $u)
+                                    @php
+                                        $isMe = auth()->id() === $u->id;
+                                        $isActive = strtoupper((string) ($u->status ?? 'ACTIVE')) === 'ACTIVE';
+                                        $initial = strtoupper(substr((string) $u->name, 0, 1));
+                                        $avatarPath = (string) ($u->avatar_path ?? '');
+                                        $avatarUrl = $avatarSrc($avatarPath);
+                                    @endphp
+                                    <div class="p-4">
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div class="flex min-w-0 gap-3">
+                                                <div class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-900 text-sm font-semibold text-white">
+                                                    @if ($avatarPath !== '')
+                                                        <img src="{{ $avatarUrl }}" alt="{{ $u->name }}" class="h-full w-full object-cover" />
+                                                    @else
+                                                        {{ $initial }}
+                                                    @endif
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <div class="truncate text-sm font-semibold text-slate-900">{{ $u->name }}</div>
+                                                    <div class="mt-0.5 text-xs text-slate-500">ID: {{ $u->id }}</div>
+                                                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                                                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ $roleBadge($u->role) }}">
+                                                            {{ strtoupper((string) $u->role) }}
+                                                        </span>
+                                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                                            <span class="inline-block size-2 rounded-full {{ $isActive ? 'bg-emerald-500' : 'bg-slate-400' }}"></span>
+                                                            {{ $isActive ? 'Active' : 'Inactive' }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div x-data="{ open: false }" @click.outside="open = false" class="relative inline-block text-left">
+                                                <button
+                                                    @click="open = !open"
+                                                    type="button"
+                                                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                    :class="{ 'bg-slate-100': open }"
+                                                    aria-label="Actions"
+                                                >
+                                                    <svg class="size-4" fill="currentColor" viewBox="0 0 24 24">
+                                                        <circle cx="12" cy="5" r="1.5" />
+                                                        <circle cx="12" cy="12" r="1.5" />
+                                                        <circle cx="12" cy="19" r="1.5" />
+                                                    </svg>
+                                                </button>
+
+                                                <div
+                                                    x-show="open"
+                                                    x-transition:enter="transition ease-out duration-100"
+                                                    x-transition:enter-start="transform opacity-0 scale-95"
+                                                    x-transition:enter-end="transform opacity-100 scale-100"
+                                                    x-transition:leave="transition ease-in duration-75"
+                                                    x-transition:leave-start="transform opacity-100 scale-100"
+                                                    x-transition:leave-end="transform opacity-0 scale-95"
+                                                    @click="open = false"
+                                                    x-cloak
+                                                    class="absolute right-0 z-[9999] mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5"
+                                                >
+                                                    <a
+                                                        href="{{ route('users.edit', $u->id) }}"
+                                                        class="group flex w-full items-center px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                                        @click="open = false"
+                                                    >
+                                                        <svg class="mr-3 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                        Edit
+                                                    </a>
+
+                                                    @if ($isMe)
+                                                        <button type="button" disabled class="group flex w-full items-center px-4 py-2 text-left text-sm text-slate-400 cursor-not-allowed">
+                                                            <svg class="mr-3 h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                            </svg>
+                                                            {{ $isActive ? 'Suspend' : 'Activate' }}
+                                                        </button>
+                                                    @else
+                                                        <form method="POST" action="/dashboard/users/{{ $u->id }}/toggle">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <button type="submit" class="group flex w-full items-center px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
+                                                                <svg class="mr-3 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                                </svg>
+                                                                {{ $isActive ? 'Suspend' : 'Activate' }}
+                                                            </button>
+                                                        </form>
+                                                    @endif
+
+                                                    <div class="my-1 h-px bg-slate-100"></div>
+
+                                                    @if ($isMe)
+                                                        <button type="button" disabled class="group flex w-full items-center px-4 py-2 text-left text-sm text-slate-400 cursor-not-allowed">
+                                                            <svg class="mr-3 h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                            Delete
+                                                        </button>
+                                                    @else
+                                                        <form method="POST" action="/dashboard/users/{{ $u->id }}" onsubmit="return confirm('Hapus user ini?')">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="group flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                                                                <svg class="mr-3 h-4 w-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                </svg>
+                                                                Delete
+                                                            </button>
+                                                        </form>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <div class="hidden md:block overflow-x-auto md:overflow-visible">
+                                <table class="min-w-full text-sm">
+                                    <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                        <tr>
+                                            <th class="px-5 py-3 text-left font-semibold first:rounded-tl-lg">ID</th>
+                                            <th class="px-5 py-3 text-left font-semibold">User</th>
+                                            <th class="px-5 py-3 text-left font-semibold">Email</th>
+                                            <th class="px-5 py-3 text-left font-semibold">Role</th>
+                                            <th class="px-5 py-3 text-left font-semibold">Status</th>
+                                            <th class="px-5 py-3 text-left font-semibold">Last Active</th>
+                                            <th class="px-5 py-3 text-right font-semibold last:rounded-tr-lg">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-200">
+                                        @foreach ($users as $u)
+                                            @php
+                                                $isMe = auth()->id() === $u->id;
+                                                $isActive = strtoupper((string) ($u->status ?? 'ACTIVE')) === 'ACTIVE';
+                                                $initial = strtoupper(substr((string) $u->name, 0, 1));
+                                                $avatarPath = (string) ($u->avatar_path ?? '');
+                                                $avatarUrl = $avatarSrc($avatarPath);
+                                                $lastAt = $u->last_login_at ?? $u->updated_at;
+                                                $lastActive = $lastAt ? $lastAt->format('Y-m-d H:i') : '—';
+                                            @endphp
+                                            <tr class="hover:bg-slate-50">
+                                                <td class="px-5 py-3 text-slate-600">{{ $u->id }}</td>
+                                                <td class="px-5 py-3">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-900 text-xs font-semibold text-white">
+                                                            @if ($avatarPath !== '')
+                                                                <img src="{{ $avatarUrl }}" alt="{{ $u->name }}" class="h-full w-full object-cover" />
+                                                            @else
+                                                                {{ $initial }}
+                                                            @endif
+                                                        </div>
+                                                        <div class="min-w-0">
+                                                            <div class="truncate font-semibold text-slate-900">{{ $u->name }}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-5 py-3 text-slate-700">{{ $u->email }}</td>
+                                                <td class="px-5 py-3">
+                                                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ $roleBadge($u->role) }}">
+                                                        {{ strtoupper((string) $u->role) }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-5 py-3">
+                                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                                        <span class="inline-block size-2 rounded-full {{ $isActive ? 'bg-emerald-500' : 'bg-slate-400' }}"></span>
+                                                        {{ $isActive ? 'Active' : 'Inactive' }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-5 py-3 text-slate-600">{{ $lastActive }}</td>
+                                                <td class="px-5 py-3 text-right">
+                                                    <div x-data="{ open: false }" @click.outside="open = false" class="relative inline-block text-left">
+                                                        <button
+                                                            @click="open = !open"
+                                                            type="button"
+                                                            class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                            :class="{ 'bg-slate-100': open }"
+                                                            aria-label="Actions"
+                                                        >
+                                                            <svg class="size-4" fill="currentColor" viewBox="0 0 24 24">
+                                                                <circle cx="12" cy="5" r="1.5" />
+                                                                <circle cx="12" cy="12" r="1.5" />
+                                                                <circle cx="12" cy="19" r="1.5" />
+                                                            </svg>
+                                                        </button>
+
+                                                        <div
+                                                            x-show="open"
+                                                            x-transition:enter="transition ease-out duration-100"
+                                                            x-transition:enter-start="transform opacity-0 scale-95"
+                                                            x-transition:enter-end="transform opacity-100 scale-100"
+                                                            x-transition:leave="transition ease-in duration-75"
+                                                            x-transition:leave-start="transform opacity-100 scale-100"
+                                                            x-transition:leave-end="transform opacity-0 scale-95"
+                                                            @click="open = false"
+                                                            x-cloak
+                                                            class="absolute right-0 z-[9999] mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5"
+                                                        >
+                                                            <a
+                                                                href="{{ route('users.edit', $u->id) }}"
+                                                                class="group flex w-full items-center px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                                                @click="open = false"
+                                                            >
+                                                                <svg class="mr-3 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                </svg>
+                                                                Edit
+                                                            </a>
+
+                                                            @if ($isMe)
+                                                                <button type="button" disabled class="group flex w-full items-center px-4 py-2 text-left text-sm text-slate-400 cursor-not-allowed">
+                                                                    <svg class="mr-3 h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                                    </svg>
+                                                                    {{ $isActive ? 'Suspend' : 'Activate' }}
+                                                                </button>
+                                                            @else
+                                                                <form method="POST" action="/dashboard/users/{{ $u->id }}/toggle">
+                                                                    @csrf
+                                                                    @method('PUT')
+                                                                    <button type="submit" class="group flex w-full items-center px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
+                                                                        <svg class="mr-3 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                                        </svg>
+                                                                        {{ $isActive ? 'Suspend' : 'Activate' }}
+                                                                    </button>
+                                                                </form>
+                                                            @endif
+
+                                                            <div class="my-1 h-px bg-slate-100"></div>
+
+                                                            @if ($isMe)
+                                                                <button type="button" disabled class="group flex w-full items-center px-4 py-2 text-left text-sm text-slate-400 cursor-not-allowed">
+                                                                    <svg class="mr-3 h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                    Delete
+                                                                </button>
+                                                            @else
+                                                                <form method="POST" action="/dashboard/users/{{ $u->id }}" onsubmit="return confirm('Hapus user ini?')">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="submit" class="group flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                                                                        <svg class="mr-3 h-4 w-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                        </svg>
+                                                                        Delete
+                                                                    </button>
+                                                                </form>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div x-show="addOpen" x-transition.opacity x-cloak class="fixed inset-0 z-50">
+        <button type="button" class="absolute inset-0 bg-slate-900/40" @click="addOpen = false" aria-label="Close"></button>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="w-full max-w-xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                    <div>
+                        <div class="text-sm font-semibold text-slate-900">Add User</div>
+                        <div class="mt-1 text-sm text-slate-600">Create a new user account.</div>
+                    </div>
+                    <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-slate-50" @click="addOpen = false" aria-label="Close">
+                        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6 6 18" />
+                            <path d="m6 6 12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <form method="POST" action="/dashboard/users" class="px-5 py-5" enctype="multipart/form-data">
+                    @csrf
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-slate-900" for="name">Name</label>
+                            <input id="name" name="name" required value="{{ old('name') }}"
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200"
+                                placeholder="Full name" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-slate-900" for="email">Email</label>
+                            <input id="email" name="email" type="email" required value="{{ old('email') }}"
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200"
+                                placeholder="name@company.com" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-slate-900" for="role">Role</label>
+                            <select id="role" name="role" required
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200">
+                                @foreach ($roles as $r)
+                                    <option value="{{ $r }}" {{ old('role') === $r ? 'selected' : '' }}>{{ $r }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-slate-900" for="password">Password</label>
+                            <input id="password" name="password" type="password" required minlength="8"
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200"
+                                placeholder="Minimum 8 characters" />
+                        </div>
+                        <div class="space-y-1.5 md:col-span-2">
+                            <label class="text-sm font-semibold text-slate-900" for="password_confirmation">Confirm Password</label>
+                            <input id="password_confirmation" name="password_confirmation" type="password" required minlength="8"
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200"
+                                placeholder="Repeat password" />
+                        </div>
+                        <div class="space-y-1.5 md:col-span-2">
+                            <label class="text-sm font-semibold text-slate-900" for="avatar">Profile Photo (optional)</label>
+                            <input id="avatar" name="avatar" type="file" accept="image/*"
+                                class="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-900 hover:file:bg-slate-200" />
+                            <div class="text-xs text-slate-500">PNG/JPG, max 2MB.</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex items-center justify-end gap-2">
+                        <button type="button" @click="addOpen = false"
+                            class="inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                            Add User
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="editOpen" x-transition.opacity x-cloak class="fixed inset-0 z-50">
+        <button type="button" class="absolute inset-0 bg-slate-900/40" @click="editOpen = false" aria-label="Close"></button>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="w-full max-w-xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                    <div>
+                        <div class="text-sm font-semibold text-slate-900">Edit User</div>
+                        <div class="mt-1 text-sm text-slate-600">Update user details.</div>
+                    </div>
+                    <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-slate-50" @click="editOpen = false" aria-label="Close">
+                        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6 6 18" />
+                            <path d="m6 6 12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <form method="POST" :action="`/dashboard/users/${editUserId}`" class="px-5 py-5" enctype="multipart/form-data">
+                    @csrf
+                    @method('PUT')
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-slate-900">Name</label>
+                            <input name="name" x-model="editForm.name" required
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-slate-900">Email</label>
+                            <input name="email" type="email" x-model="editForm.email" required
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-slate-900">Role</label>
+                            <select name="role" x-model="editForm.role" required
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200">
+                                @foreach ($roles as $r)
+                                    <option value="{{ $r }}">{{ $r }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-slate-900">Password</label>
+                            <input name="password" type="password" x-model="editForm.password"
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200"
+                                placeholder="Leave blank to keep" />
+                        </div>
+                        <div class="space-y-1.5 md:col-span-2">
+                            <label class="text-sm font-semibold text-slate-900">Confirm Password</label>
+                            <input name="password_confirmation" type="password" x-model="editForm.password_confirmation"
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200"
+                                placeholder="Repeat password" />
+                        </div>
+                        <div class="space-y-1.5 md:col-span-2">
+                            <label class="text-sm font-semibold text-slate-900" for="avatar_edit">Profile Photo</label>
+                            <input id="avatar_edit" name="avatar" type="file" accept="image/*"
+                                class="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-900 hover:file:bg-slate-200" />
+                            <div class="text-xs text-slate-500">Upload untuk mengganti foto. PNG/JPG, max 2MB.</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex items-center justify-end gap-2">
+                        <button type="button" @click="editOpen = false"
+                            class="inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                            Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script defer src="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+
+</html>

@@ -91,6 +91,41 @@
                         </div>
                     </a>
 
+                    <a
+                        href="/dashboard/users"
+                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard/users*') ? 'cms-menu-active' : '' }}">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Kelola Pengguna</span>
+                        <div
+                            x-show="!sidebarOpen"
+                            x-transition
+                            x-cloak
+                            class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                            Kelola Pengguna
+                        </div>
+                    </a>
+
+                    <a
+                        href="/dashboard/chat"
+                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard/chat*') ? 'cms-menu-active' : '' }}">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" />
+                        </svg>
+                        <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Chat Pelanggan</span>
+                        <div
+                            x-show="!sidebarOpen"
+                            x-transition
+                            x-cloak
+                            class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                            Chat Pelanggan
+                        </div>
+                    </a>
+
                     <div class="space-y-1">
                         <button
                             type="button"
@@ -190,15 +225,7 @@
 
         <div class="flex min-w-0 flex-1 flex-col">
             <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-gray-200/80 bg-white px-6">
-                <div class="relative w-full max-w-md">
-                    <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 21l-4.3-4.3" />
-                        <circle cx="11" cy="11" r="7" />
-                    </svg>
-                    <input class="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-10 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm transition focus:bg-white focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20" placeholder="Search..." />
-                </div>
-
-                <div class="flex shrink-0 items-center gap-3">
+                <div class="flex shrink-0 items-center gap-3 ml-auto">
                     <button type="button" class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50" aria-label="Notifications">
                         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
@@ -206,12 +233,85 @@
                         </svg>
                         <span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
                     </button>
-                    <div class="flex items-center gap-3">
-                        <div class="hidden text-right sm:block">
-                            <div class="text-sm font-semibold text-gray-900">Admin</div>
-                            <div class="text-xs text-gray-500">Administrator</div>
+                    @php
+                        $me = auth()->user();
+                        $avatarPath = (string) ($me?->avatar_path ?? '');
+                        $avatarLegacy = (string) ($me?->avatar ?? '');
+                        $avatarUrl = '';
+                        if ($avatarPath !== '') {
+                            if (str_starts_with($avatarPath, 'http')) {
+                                $avatarUrl = $avatarPath;
+                            } elseif (str_starts_with($avatarPath, '/uploads/') || str_starts_with($avatarPath, 'uploads/')) {
+                                $avatarUrl = asset(ltrim($avatarPath, '/'));
+                            } elseif (str_starts_with($avatarPath, 'avatars/')) {
+                                $avatarUrl = asset('storage/' . $avatarPath);
+                            } else {
+                                $avatarUrl = asset('storage/' . ltrim($avatarPath, '/'));
+                            }
+                        } elseif ($avatarLegacy !== '') {
+                            $avatarUrl = str_starts_with($avatarLegacy, 'http') ? $avatarLegacy : asset(ltrim($avatarLegacy, '/'));
+                        } else {
+                            $nameForAvatar = trim((string) ($me?->name ?? 'Admin'));
+                            $avatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($nameForAvatar) . '&background=0f172a&color=ffffff&bold=true&size=128';
+                        }
+                    @endphp
+
+                    <div x-data="{ open: false }" class="relative">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="flex items-center gap-3 rounded-full bg-white pl-1 pr-3 py-1 shadow-sm ring-1 ring-black/5 hover:bg-gray-50"
+                            :aria-expanded="open"
+                            aria-haspopup="menu"
+                        >
+                            <img
+                                src="{{ $avatarUrl }}"
+                                alt="{{ $me?->name ?? 'Admin' }}"
+                                class="size-9 rounded-full object-cover bg-slate-900 ring-2 ring-gray-100"
+                            />
+                            <span class="hidden text-sm font-semibold text-gray-900 sm:block">{{ $me?->name ?? 'Admin' }}</span>
+                            <svg class="size-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            x-cloak
+                            @click.outside="open = false"
+                            @keydown.escape.window="open = false"
+                            x-transition:enter="transition ease-out duration-120"
+                            x-transition:enter-start="transform opacity-0 scale-95"
+                            x-transition:enter-end="transform opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="transform opacity-100 scale-100"
+                            x-transition:leave-end="transform opacity-0 scale-95"
+                            class="absolute right-0 z-50 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-black/5"
+                            role="menu"
+                        >
+                            <div class="py-1">
+                                <a
+                                    href="{{ route('profile.edit') }}"
+                                    @click.stop
+                                    class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                    role="menuitem"
+                                    @click="open = false"
+                                >
+                                    Update Profile
+                                </a>
+
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button
+                                        type="submit"
+                                        class="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                        role="menuitem"
+                                    >
+                                        Logout
+                                    </button>
+                                </form>
+                            </div>
                         </div>
-                        <div class="grid size-9 place-items-center rounded-full bg-slate-900 text-sm font-semibold text-white ring-2 ring-gray-100">AD</div>
                     </div>
                 </div>
             </header>
