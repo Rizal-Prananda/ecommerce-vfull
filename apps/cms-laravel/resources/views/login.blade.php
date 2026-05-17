@@ -8,56 +8,141 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="min-h-full bg-gray-50 text-gray-900">
-    <main class="flex min-h-screen items-center justify-center px-6 py-12">
-        <section class="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div class="border-b border-gray-100 bg-white px-7 py-6">
-                <div class="flex items-center gap-3">
-                    <div class="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-sm font-semibold text-white">R</div>
-                    <div class="leading-tight">
-                        <div class="text-sm font-semibold text-gray-900">Rizal CMS</div>
-                        <div class="text-xs text-gray-500">Login Admin</div>
+<body class="bg-white text-slate-900">
+    <main class="min-h-screen">
+        <div class="flex min-h-screen">
+            <div class="relative hidden overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 lg:flex lg:w-1/2">
+                <div class="absolute inset-0 opacity-40"
+                    style="background-image: linear-gradient(to right, rgba(79,70,229,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(79,70,229,0.08) 1px, transparent 1px); background-size: 60px 60px;">
+                </div>
+                <div class="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl"></div>
+                <div class="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-purple-600/10 blur-3xl"></div>
+
+                <div class="relative z-10 flex w-full flex-col justify-between p-12">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur">
+                            <span class="text-lg font-bold text-white">R</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-white">CMS - E-Commerce</p>
+                            <p class="text-xs text-slate-400">Admin Dashboard</p>
+                        </div>
                     </div>
+
+                    <div class="max-w-md">
+                        <h2 class="text-4xl font-bold leading-tight text-white">
+                            Kelola konten dalam satu dashboard
+                        </h2>
+                        <p class="mt-4 text-base text-slate-300">
+                            Masuk untuk mengelola pengguna, konten, dan operasional dengan tampilan yang rapi dan cepat.
+                        </p>
+
+                        <div class="mt-8 flex gap-4">
+                            <div class="rounded-lg border border-white/10 bg-white/5 p-3 backdrop-blur">
+                                <p class="text-2xl font-bold text-white">2.4k</p>
+                                <p class="text-xs text-slate-400">Active Users</p>
+                            </div>
+                            <div class="rounded-lg border border-white/10 bg-white/5 p-3 backdrop-blur">
+                                <p class="text-2xl font-bold text-white">98%</p>
+                                <p class="text-xs text-slate-400">Uptime</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-slate-500">© {{ date('Y') }} CMS - E-Commerce</p>
                 </div>
             </div>
 
-            <div class="px-7 py-6">
-                <form method="POST" action="/login" class="space-y-4">
-                    @csrf
-
-                    <div class="space-y-1.5">
-                        <label class="text-sm font-semibold text-gray-900" for="email">Email</label>
-                        <input id="email" name="email" type="email" required value="{{ old('email') }}"
-                            class="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm text-gray-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-blue-500/20" />
+            <div class="flex w-full items-center justify-center px-6 py-12 lg:w-1/2">
+                <div class="w-full max-w-sm">
+                    <div class="mb-8 lg:hidden">
+                        <div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900">
+                            <span class="text-lg font-bold text-white">R</span>
+                        </div>
                     </div>
 
-                    <div class="space-y-1.5">
-                        <label class="text-sm font-semibold text-gray-900" for="password">Password</label>
-                        <input id="password" name="password" type="password" required
-                            class="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm text-gray-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-blue-500/20" />
-                    </div>
+                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Welcome back</h1>
+                    <p class="mt-2 text-sm text-slate-600">Sign in to your account to continue</p>
 
-                    @if (session('error'))
-                        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                            {{ session('error') }}
+                    <form method="POST" action="{{ route('login') }}" class="mt-8">
+                        @csrf
+
+                        <div class="space-y-5 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xl shadow-slate-900/5">
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-slate-700">Email</label>
+                                <div class="relative mt-1.5">
+                                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        id="email"
+                                        required
+                                        autofocus
+                                        value="{{ old('email') }}"
+                                        placeholder="name@company.com"
+                                        class="block w-full rounded-lg border border-slate-300 bg-slate-50/50 py-2.5 pl-9 pr-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+                                    />
+                                </div>
+                                @error('email')<p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>@enderror
+                            </div>
+
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
+                                    @if (\Illuminate\Support\Facades\Route::has('password.request'))
+                                        <a href="{{ route('password.request') }}" class="text-xs font-medium text-blue-600 hover:text-blue-500">Forgot?</a>
+                                    @endif
+                                </div>
+                                <div class="relative mt-1.5">
+                                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        id="password"
+                                        required
+                                        placeholder="••••••••"
+                                        class="block w-full rounded-lg border border-slate-300 bg-slate-50/50 py-2.5 pl-9 pr-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+                                    />
+                                </div>
+                                @error('password')<p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>@enderror
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="remember" id="remember" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" {{ old('remember') ? 'checked' : '' }}>
+                                    <label for="remember" class="ml-2 text-sm text-slate-700">Remember me</label>
+                                </div>
+                            </div>
+
+                            @if (session('error'))
+                                <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                                    {{ session('error') }}
+                                </div>
+                            @endif
+
+                            <button type="submit"
+                                class="group relative flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-slate-900/20 active:scale-[0.98]">
+                                <span class="relative z-10">Sign in</span>
+                                <div class="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 transition-opacity group-hover:opacity-100"></div>
+                            </button>
                         </div>
-                    @endif
+                    </form>
 
-                    @if ($errors->any())
-                        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                            <div class="font-semibold">Form tidak valid.</div>
-                        </div>
-                    @endif
-
-                    <button type="submit"
-                        class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                        Login
-                    </button>
-                </form>
+                    <p class="mt-6 text-center text-xs text-slate-500">
+                        Dengan login, kamu menyetujui <a href="#" class="font-medium text-slate-700 hover:underline">kebijakan</a> internal.
+                    </p>
+                </div>
             </div>
-        </section>
+        </div>
     </main>
 </body>
 
 </html>
-

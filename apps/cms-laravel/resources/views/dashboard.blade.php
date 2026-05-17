@@ -64,8 +64,7 @@
                 <div class="flex w-full items-center gap-3" :class="sidebarOpen ? '' : 'justify-center'">
                     <div class="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20">R</div>
                     <div x-show="sidebarOpen" x-transition.opacity.duration.300ms class="leading-tight" x-cloak>
-                        <div class="text-sm font-semibold text-white">Rizal CMS</div>
-                        <div class="text-xs text-slate-400">Dashboard</div>
+                        <div class="text-sm font-semibold text-white">CMS - E-Commerce</div>
                     </div>
                 </div>
             </div>
@@ -233,6 +232,7 @@
                         </svg>
                         <span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
                     </button>
+
                     @php
                         $me = auth()->user();
                         $avatarPath = (string) ($me?->avatar_path ?? '');

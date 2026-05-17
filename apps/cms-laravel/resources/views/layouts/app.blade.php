@@ -69,8 +69,7 @@
                         class="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20">
                         R</div>
                     <div x-show="sidebarOpen" x-transition.opacity.duration.300ms class="leading-tight" x-cloak>
-                        <div class="text-sm font-semibold text-white">Rizal CMS</div>
-                        <div class="text-xs text-slate-400">Dashboard</div>
+                        <div class="text-sm font-semibold text-white">CMS - E-Commerce</div>
                     </div>
                 </div>
             </div>
@@ -206,6 +205,14 @@
         <div class="flex min-w-0 flex-1 flex-col">
             <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white px-6">
                 <div class="flex shrink-0 items-center gap-3 ml-auto">
+                    <button type="button" class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50" aria-label="Notifications">
+                        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+                    </button>
+
                     @php
                         $me = auth()->user();
                         $avatarPath = (string) ($me?->avatar_path ?? '');
