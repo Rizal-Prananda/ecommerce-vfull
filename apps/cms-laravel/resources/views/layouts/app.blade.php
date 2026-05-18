@@ -38,7 +38,7 @@
         }
 
         #cms-admin .cms-menu-item:hover {
-            background: var(--cms-bg-hover) !important;
+            background: rgb(34, 197, 94) !important;
             color: var(--cms-text-active) !important;
         }
 

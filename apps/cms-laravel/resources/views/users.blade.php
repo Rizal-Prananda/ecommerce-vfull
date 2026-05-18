@@ -181,80 +181,11 @@
                         </div>
                     </a>
 
-                    <div class="space-y-1">
-                        <button type="button" @click="openSubmenu === 'produk' ? openSubmenu = null : openSubmenu = 'produk'"
-                            class="group relative cms-menu-item flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200">
-                            <span class="flex items-center gap-3">
-                                <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path d="M21 8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 8" />
-                                    <path d="M21 12a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 12" />
-                                </svg>
-                                <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Produk</span>
-                                <div x-show="!sidebarOpen" x-transition x-cloak
-                                    class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
-                                    Produk
-                                </div>
-                            </span>
-                            <svg x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak class="size-4 transition-transform"
-                                :class="openSubmenu === 'produk' && 'rotate-180'" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2">
-                                <path d="M6 9l6 6 6-6" />
-                            </svg>
-                        </button>
+                   
 
-                        <div x-show="openSubmenu === 'produk' && sidebarOpen" x-collapse x-cloak class="pl-3">
-                            <div class="mt-1 space-y-1">
-                                <a href="/api/products"
-                                    class="cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200">
-                                    <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2">
-                                        <path d="M3 6h18" />
-                                        <path d="M3 12h18" />
-                                        <path d="M3 18h18" />
-                                    </svg>
-                                    <span>Semua Produk</span>
-                                </a>
-                                <a href="/api/categories"
-                                    class="cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200">
-                                    <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2">
-                                        <path d="M3 3h7v7H3V3Z" />
-                                        <path d="M14 3h7v7h-7V3Z" />
-                                        <path d="M14 14h7v7h-7v-7Z" />
-                                        <path d="M3 14h7v7H3v-7Z" />
-                                    </svg>
-                                    <span>Kategori</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+                
 
-                    <a href="/api/testimonials"
-                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200">
-                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" />
-                        </svg>
-                        <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Testimoni</span>
-                        <div x-show="!sidebarOpen" x-transition x-cloak
-                            class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
-                            Testimoni
-                        </div>
-                    </a>
-
-                    <a href="/api/recommendations"
-                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200">
-                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M12 17.27 18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27Z" />
-                        </svg>
-                        <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Rekomendasi</span>
-                        <div x-show="!sidebarOpen" x-transition x-cloak
-                            class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
-                            Rekomendasi
-                        </div>
-                    </a>
+                    
                 </div>
             </nav>
 
