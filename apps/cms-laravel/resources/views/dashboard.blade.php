@@ -16,12 +16,12 @@
         }
 
         #cms-admin {
-            --cms-bg: #0a0a0a;
+            --cms-bg: linear-gradient(135deg, #08163D, #0E1F4F, #10245C) !important;
             --cms-bg-hover: rgba(255, 255, 255, 0.05);
             --cms-border: rgba(255, 255, 255, 0.08);
-            --cms-text: #a1a1aa;
-            --cms-text-active: #fafafa;
-            --cms-primary: #3b82f6;
+            --cms-text: #ffffff;
+            --cms-text-active: #ffffff;
+            --cms-primary: #2275fc;
         }
 
         #cms-admin .cms-sidebar {
@@ -39,20 +39,20 @@
         }
 
         #cms-admin .cms-menu-item:hover {
-            background: rgb(34, 197, 94) !important;
+            background: rgb(44, 149, 247) !important;
             color: var(--cms-text-active) !important;
         }
 
         #cms-admin .cms-menu-active {
-            background: rgba(59, 130, 246, 0.12) !important;
-            color: #60a5fa !important;
+            background: rgba(40, 122, 255, 0.12) !important;
+            color: #4393f5 !important;
             border-left: 2px solid var(--cms-primary) !important;
             box-shadow: none !important;
         }
     </style>
     <div id="cms-admin" class="h-screen flex" x-data="{ sidebarOpen: true, openSubmenu: 'produk' }">
         <aside
-            class="cms-sidebar sticky top-0 z-40 hidden h-screen flex-col relative transition-all duration-300 ease-out md:flex"
+            class="cms-sidebar sticky top-0 z-40 hidden h-screen flex-col relative transition-all duration-300 ease-out md:flex shadow-[8px_0_15px_rgba(0,0,0,0.15)] shadow-black/50"
             :class="sidebarOpen ? 'w-64' : 'w-20'">
             <button type="button" @click="sidebarOpen = !sidebarOpen" class="absolute -right-3 top-6 grid h-6 w-6 place-items-center rounded-full border border-gray-200 bg-white text-slate-900 shadow-sm" aria-label="Toggle sidebar">
                 <svg class="size-4 transition-transform" :class="sidebarOpen ? '' : 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -60,17 +60,16 @@
                 </svg>
             </button>
 
-            <div class="cms-sidebar-header flex h-16 items-center px-4">
-                <div class="flex w-full items-center gap-3" :class="sidebarOpen ? '' : 'justify-center'">
-                    <div class="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20">R</div>
-                    <div x-show="sidebarOpen" x-transition.opacity.duration.300ms class="leading-tight" x-cloak>
-                        <div class="text-sm font-semibold text-white">CMS - E-Commerce</div>
-                    </div>
+            <div class="cms-sidebar-header flex h-auto flex-col items-center justify-center gap-2 px-4 py-3">
+                <img src="{{ asset('logo.png') }}" alt="Avenue Collective" class="size-20 rounded-xl object-cover shadow-[0_0_15px_rgba(0,0,0,0.15)] shadow-black/50" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+                
+                <div x-show="sidebarOpen" x-transition.opacity.duration.300ms class="leading-tight text-center" x-cloak>
+                    <div class="text-sm font-semibold text-white">Avenue Collective</div>
                 </div>
             </div>
 
             <nav class="flex-1 px-3 py-4 text-sm font-medium">
-                <div class="space-y-1">
+                <div class="space-y-1 rounded-lg px-3 py-2.5 shadow-[0_0_15px_rgba(0,0,0,0.15)] shadow-black/30">
                     <a
                         href="/dashboard"
                         class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard') ? 'cms-menu-active' : '' }}">
@@ -132,7 +131,7 @@
         </aside>
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-gray-200/80 bg-white px-6">
+            <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-gray-200/80 bg-[#0E1F4F] px-6">
                 <div class="flex shrink-0 items-center gap-3 ml-auto">
                     <button type="button" class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50" aria-label="Notifications">
                         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -229,15 +228,9 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 class="text-2xl font-semibold text-gray-900">Dashboard</h1>
-                        <p class="mt-1 text-sm text-gray-500">ERP overview untuk operasional & konten</p>
+                        <p class="mt-1 text-sm text-gray-500">Pusat Kontrol Operasional & Konten</p>
                     </div>
-                    <div class="flex flex-wrap gap-2">
-                        <a href="/api/health" class="inline-flex h-10 items-center justify-center rounded-md border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50">API Health</a>
-                        <form method="POST" action="/logout">
-                            @csrf
-                            <button type="submit" class="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">Logout</button>
-                        </form>
-                    </div>
+                    
                 </div>
 
                 <section class="mt-6 grid gap-4 md:grid-cols-4">

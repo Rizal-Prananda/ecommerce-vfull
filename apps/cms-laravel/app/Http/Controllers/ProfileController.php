@@ -39,17 +39,22 @@ class ProfileController extends Controller
             $filename = (string) Str::uuid() . '.' . $avatar->getClientOriginalExtension();
 
             $old = (string) ($user->avatar_path ?? '');
-            $user->avatar_path = $avatar->storeAs('avatars', $filename, 'public');
+            $uploadsDir = public_path('uploads/avatars');
+            if (!is_dir($uploadsDir)) {
+                mkdir($uploadsDir, 0755, true);
+            }
+            $avatar->move($uploadsDir, $filename);
+            $user->avatar_path = 'uploads/avatars/' . $filename;
 
             if ($old !== '') {
-                if (str_starts_with($old, 'avatars/')) {
-                    Storage::disk('public')->delete($old);
-                }
-                if (str_starts_with($old, '/uploads/avatars/')) {
-                    $oldPath = public_path(ltrim($old, '/'));
+                if (str_starts_with($old, 'uploads/avatars/')) {
+                    $oldPath = public_path($old);
                     if (is_file($oldPath)) {
                         @unlink($oldPath);
                     }
+                }
+                if (str_starts_with($old, 'avatars/')) {
+                    Storage::disk('public')->delete($old);
                 }
             }
         }

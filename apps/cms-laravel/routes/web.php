@@ -56,15 +56,19 @@ Route::post('/login', function (Request $request) {
     ensureBootstrapAdmin();
 
     $credentials = $request->validate([
-        'email' => ['required', 'email'],
+        'login' => ['required', 'string'],
         'password' => ['required', 'string'],
     ]);
 
-    $email = strtolower(trim((string) $credentials['email']));
+    $login = strtolower(trim((string) $credentials['login']));
     $password = (string) $credentials['password'];
 
-    if (!Auth::attempt(['email' => $email, 'password' => $password], true)) {
-        return back()->with('error', 'Login gagal. Email atau password salah.')->withInput();
+    // Try login with email or username
+    $attempt = Auth::attempt(['email' => $login, 'password' => $password], true) 
+        || Auth::attempt(['username' => $login, 'password' => $password], true);
+
+    if (!$attempt) {
+        return back()->with('error', 'Login gagal. Email/Username atau password salah.')->withInput();
     }
 
     $request->session()->regenerate();
@@ -149,6 +153,7 @@ Route::get('/dashboard/users/{user}/edit', function (User $user) {
 Route::post('/dashboard/users', function (Request $request) {
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:255'],
+        'username' => ['required', 'string', 'max:255', 'unique:users,username'],
         'email' => ['required', 'email', 'max:255', 'unique:users,email'],
         'role' => ['required', 'in:ADMIN,CS,TEKNISI,USER'],
         'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed'],
@@ -157,6 +162,7 @@ Route::post('/dashboard/users', function (Request $request) {
 
     $user = User::create([
         'name' => trim((string) $validated['name']),
+        'username' => strtolower(trim((string) $validated['username'])),
         'email' => strtolower(trim((string) $validated['email'])),
         'role' => strtoupper((string) $validated['role']),
         'password' => Hash::make((string) $validated['password']),
@@ -167,7 +173,12 @@ Route::post('/dashboard/users', function (Request $request) {
     $avatar = $request->file('avatar');
     if ($avatar) {
         $filename = (string) Str::uuid() . '.' . $avatar->getClientOriginalExtension();
-        $user->avatar_path = $avatar->storeAs('avatars', $filename, 'public');
+        $uploadsDir = public_path('uploads/avatars');
+        if (!is_dir($uploadsDir)) {
+            mkdir($uploadsDir, 0755, true);
+        }
+        $avatar->move($uploadsDir, $filename);
+        $user->avatar_path = 'uploads/avatars/' . $filename;
         $user->save();
     }
 
@@ -177,6 +188,7 @@ Route::post('/dashboard/users', function (Request $request) {
 Route::put('/dashboard/users/{user}', function (Request $request, User $user) {
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:255'],
+        'username' => ['required', 'string', 'max:255', 'unique:users,username,' . $user->id],
         'role' => ['required', 'in:USER,ADMIN,SUPERADMIN'],
         'status' => ['nullable', 'in:active,inactive,suspended'],
         'password' => ['nullable', 'string', 'min:8', 'max:255', 'confirmed'],
@@ -184,6 +196,7 @@ Route::put('/dashboard/users/{user}', function (Request $request, User $user) {
     ]);
 
     $user->name = trim((string) $validated['name']);
+    $user->username = strtolower(trim((string) $validated['username']));
     $user->role = strtoupper((string) $validated['role']);
     if (array_key_exists('status', $validated) && $validated['status'] !== null) {
         $user->status = strtoupper((string) $validated['status']);
@@ -197,15 +210,20 @@ Route::put('/dashboard/users/{user}', function (Request $request, User $user) {
         $filename = (string) Str::uuid() . '.' . $avatar->getClientOriginalExtension();
 
         $old = (string) ($user->avatar_path ?? '');
-        $user->avatar_path = $avatar->storeAs('avatars', $filename, 'public');
+        $uploadsDir = public_path('uploads/avatars');
+        if (!is_dir($uploadsDir)) {
+            mkdir($uploadsDir, 0755, true);
+        }
+        $avatar->move($uploadsDir, $filename);
+        $user->avatar_path = 'uploads/avatars/' . $filename;
 
         if ($old !== '') {
+            if (str_starts_with($old, 'uploads/avatars/')) {
+                $oldPath = public_path($old);
+                if (is_file($oldPath)) @unlink($oldPath);
+            }
             if (str_starts_with($old, 'avatars/')) {
                 Storage::disk('public')->delete($old);
-            }
-            if (str_starts_with($old, '/uploads/avatars/')) {
-                $oldPath = public_path(ltrim($old, '/'));
-                if (is_file($oldPath)) @unlink($oldPath);
             }
         }
     }

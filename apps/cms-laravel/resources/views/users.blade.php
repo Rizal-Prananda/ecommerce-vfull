@@ -15,12 +15,12 @@
         }
 
         #cms-admin {
-            --cms-bg: #0a0a0a;
+            --cms-bg: linear-gradient(135deg, #08163D, #0E1F4F, #10245C) !important;
             --cms-bg-hover: rgba(255, 255, 255, 0.05);
             --cms-border: rgba(255, 255, 255, 0.08);
-            --cms-text: #a1a1aa;
-            --cms-text-active: #fafafa;
-            --cms-primary: #3b82f6;
+            --cms-text: #ffffff;
+            --cms-text-active: #ffffff;
+            --cms-primary: #2275fc;
         }
 
         #cms-admin .cms-sidebar {
@@ -38,13 +38,13 @@
         }
 
         #cms-admin .cms-menu-item:hover {
-            background: var(--cms-bg-hover) !important;
+            background: rgb(44, 149, 247) !important;
             color: var(--cms-text-active) !important;
         }
 
         #cms-admin .cms-menu-active {
-            background: rgba(59, 130, 246, 0.12) !important;
-            color: #60a5fa !important;
+            background: rgba(40, 122, 255, 0.12) !important;
+            color: #4393f5 !important;
             border-left: 2px solid var(--cms-primary) !important;
             box-shadow: none !important;
         }
@@ -85,7 +85,7 @@
             addOpen: false,
             editOpen: false,
             editUserId: null,
-            editForm: { name: '', email: '', role: 'USER', password: '', password_confirmation: '' },
+            editForm: { name: '', username: '', email: '', role: 'USER', password: '', password_confirmation: '' },
             editingUser: null,
             showEditModal: false,
             openEdit(user) {
@@ -94,6 +94,7 @@
                 this.editUserId = user?.id ?? null;
                 this.editForm = {
                     name: user?.name ?? '',
+                    username: user?.username ?? '',
                     email: user?.email ?? '',
                     role: user?.role ?? 'USER',
                     password: '',
@@ -112,88 +113,86 @@
         @open-edit.window="openEdit($event.detail)"
     >
         <aside
-            class="cms-sidebar sticky top-0 z-40 hidden h-screen flex-col relative transition-all duration-300 ease-out md:flex"
+            class="cms-sidebar sticky top-0 z-40 hidden h-screen flex-col relative transition-all duration-300 ease-out md:flex shadow-[8px_0_15px_rgba(0,0,0,0.15)] shadow-black/50"
             :class="sidebarOpen ? 'w-64' : 'w-20'">
-            <button type="button" @click="sidebarOpen = !sidebarOpen"
-                class="absolute -right-3 top-6 grid h-6 w-6 place-items-center rounded-full border border-gray-200 bg-white text-slate-900 shadow-sm"
-                aria-label="Toggle sidebar">
-                <svg class="size-4 transition-transform" :class="sidebarOpen ? '' : 'rotate-180'" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" stroke-width="2">
+            <button type="button" @click="sidebarOpen = !sidebarOpen" class="absolute -right-3 top-6 grid h-6 w-6 place-items-center rounded-full border border-gray-200 bg-white text-slate-900 shadow-sm" aria-label="Toggle sidebar">
+                <svg class="size-4 transition-transform" :class="sidebarOpen ? '' : 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M15 18l-6-6 6-6" />
                 </svg>
             </button>
 
-            <div class="cms-sidebar-header flex h-16 items-center px-4">
-                <div class="flex w-full items-center gap-3" :class="sidebarOpen ? '' : 'justify-center'">
-                    <div
-                        class="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20">
-                        R</div>
-                    <div x-show="sidebarOpen" x-transition.opacity.duration.300ms class="leading-tight" x-cloak>
-                        <div class="text-sm font-semibold text-white">CMS - E-Commerce</div>
-                    </div>
+            <div class="cms-sidebar-header flex h-auto flex-col items-center justify-center gap-2 px-4 py-3">
+                <img src="{{ asset('logo.png') }}" alt="Avenue Collective" class="size-20 rounded-xl object-cover shadow-[0_0_15px_rgba(0,0,0,0.15)] shadow-black/50" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+                
+                <div x-show="sidebarOpen" x-transition.opacity.duration.300ms class="leading-tight text-center" x-cloak>
+                    <div class="text-sm font-semibold text-white">Avenue Collective</div>
                 </div>
             </div>
 
             <nav class="flex-1 px-3 py-4 text-sm font-medium">
-                <div class="space-y-1">
-                    <a href="/dashboard"
+                <div class="space-y-1 rounded-lg px-3 py-2.5 shadow-[0_0_15px_rgba(0,0,0,0.15)] shadow-black/30">
+                    <a
+                        href="/dashboard"
                         class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard') ? 'cms-menu-active' : '' }}">
-                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 13h8V3H3v10Z" />
                             <path d="M13 21h8V11h-8v10Z" />
                             <path d="M13 3h8v6h-8V3Z" />
                             <path d="M3 17h8v4H3v-4Z" />
                         </svg>
                         <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Dashboard</span>
-                        <div x-show="!sidebarOpen" x-transition x-cloak
+                        <div
+                            x-show="!sidebarOpen"
+                            x-transition
+                            x-cloak
                             class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
                             Dashboard
                         </div>
                     </a>
 
-                    <a href="/dashboard/users"
+                    <a
+                        href="/dashboard/users"
                         class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard/users*') ? 'cms-menu-active' : '' }}">
-                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                             <circle cx="9" cy="7" r="4" />
                             <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                         </svg>
                         <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Kelola Pengguna</span>
-                        <div x-show="!sidebarOpen" x-transition x-cloak
+                        <div
+                            x-show="!sidebarOpen"
+                            x-transition
+                            x-cloak
                             class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
                             Kelola Pengguna
                         </div>
                     </a>
 
-                    <a href="/dashboard/chat"
+                    <a
+                        href="/dashboard/chat"
                         class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard/chat*') ? 'cms-menu-active' : '' }}">
-                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" />
                         </svg>
                         <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Chat Pelanggan</span>
-                        <div x-show="!sidebarOpen" x-transition x-cloak
+                        <div
+                            x-show="!sidebarOpen"
+                            x-transition
+                            x-cloak
                             class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
                             Chat Pelanggan
                         </div>
                     </a>
 
-                   
-
-                
-
                     
-                </div>
             </nav>
 
             <div class="border-t border-[var(--cms-border)] p-4"></div>
         </aside>
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white px-6">
+            <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-gray-200/80 bg-[#0E1F4F] px-6">
                 @php
                     $me = auth()->user();
                     $meAvatarPath = (string) ($me?->avatar_path ?? '');
@@ -681,6 +680,12 @@
                                 placeholder="Full name" />
                         </div>
                         <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-slate-900" for="username">Username</label>
+                            <input id="username" name="username" required value="{{ old('username') }}"
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200"
+                                placeholder="username" />
+                        </div>
+                        <div class="space-y-1.5">
                             <label class="text-sm font-semibold text-slate-900" for="email">Email</label>
                             <input id="email" name="email" type="email" required value="{{ old('email') }}"
                                 class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200"
@@ -754,6 +759,11 @@
                         <div class="space-y-1.5">
                             <label class="text-sm font-semibold text-slate-900">Name</label>
                             <input name="name" x-model="editForm.name" required
+                                class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-slate-900">Username</label>
+                            <input name="username" x-model="editForm.username" required
                                 class="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:bg-white focus:ring-2 focus:ring-slate-200" />
                         </div>
                         <div class="space-y-1.5">

@@ -11,12 +11,8 @@
         if ($avatarPath !== '') {
             if (str_starts_with($avatarPath, 'http')) {
                 $avatarUrl = $avatarPath;
-            } elseif (str_starts_with($avatarPath, '/uploads/') || str_starts_with($avatarPath, 'uploads/')) {
-                $avatarUrl = asset(ltrim($avatarPath, '/'));
-            } elseif (str_starts_with($avatarPath, 'avatars/')) {
-                $avatarUrl = asset('storage/' . $avatarPath);
             } else {
-                $avatarUrl = asset('storage/' . ltrim($avatarPath, '/'));
+                $avatarUrl = asset(ltrim($avatarPath, '/'));
             }
         } elseif ($avatarLegacy !== '') {
             $avatarUrl = str_starts_with($avatarLegacy, 'http') ? $avatarLegacy : asset(ltrim($avatarLegacy, '/'));

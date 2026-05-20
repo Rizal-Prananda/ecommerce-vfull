@@ -19,33 +19,11 @@
                 <div class="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-purple-600/10 blur-3xl"></div>
 
                 <div class="relative z-10 flex w-full flex-col justify-between p-12">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur">
-                            <span class="text-lg font-bold text-white">R</span>
-                        </div>
-                        <div>
-                            <p class="text-sm font-semibold text-white">CMS - E-Commerce</p>
-                            <p class="text-xs text-slate-400">Admin Dashboard</p>
-                        </div>
-                    </div>
-
-                    <div class="max-w-md">
-                        <h2 class="text-4xl font-bold leading-tight text-white">
-                            Kelola konten dalam satu dashboard
-                        </h2>
-                        <p class="mt-4 text-base text-slate-300">
-                            Masuk untuk mengelola pengguna, konten, dan operasional dengan tampilan yang rapi dan cepat.
-                        </p>
-
-                        <div class="mt-8 flex gap-4">
-                            <div class="rounded-lg border border-white/10 bg-white/5 p-3 backdrop-blur">
-                                <p class="text-2xl font-bold text-white">2.4k</p>
-                                <p class="text-xs text-slate-400">Active Users</p>
-                            </div>
-                            <div class="rounded-lg border border-white/10 bg-white/5 p-3 backdrop-blur">
-                                <p class="text-2xl font-bold text-white">98%</p>
-                                <p class="text-xs text-slate-400">Uptime</p>
-                            </div>
+                    
+                    <div class="cms-sidebar-header flex h-auto flex-col items-center justify-center ">
+                        <img src="{{ asset('logo5.png') }}" alt="Avenue Collective" class="size-13 rounded-xl object-cover " onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';"> 
+                        <div x-show="sidebarOpen" x-transition.opacity.duration.300ms class="leading-tight text-center" x-cloak>
+                            <div class="text-xl font-semibold text-white">Avenue Collective</div>
                         </div>
                     </div>
 
@@ -61,15 +39,15 @@
                         </div>
                     </div>
 
-                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Welcome back</h1>
-                    <p class="mt-2 text-sm text-slate-600">Sign in to your account to continue</p>
+                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Akses Eksklusif</h1>
+                    <p class="mt-2 text-sm text-slate-600">Masuk untuk melanjutkan pengalaman eksklusif</p>
 
                     <form method="POST" action="{{ route('login') }}" class="mt-8">
                         @csrf
 
                         <div class="space-y-5 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xl shadow-slate-900/5">
                             <div>
-                                <label for="email" class="block text-sm font-medium text-slate-700">Email</label>
+                                <label for="login" class="block text-sm font-medium text-slate-700">Email atau Username</label>
                                 <div class="relative mt-1.5">
                                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                         <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -77,22 +55,22 @@
                                         </svg>
                                     </div>
                                     <input
-                                        type="email"
-                                        name="email"
-                                        id="email"
+                                        type="text"
+                                        name="login"
+                                        id="login"
                                         required
                                         autofocus
-                                        value="{{ old('email') }}"
-                                        placeholder="name@company.com"
+                                        value="{{ old('login') }}"
+                                        placeholder="email@example.com atau username"
                                         class="block w-full rounded-lg border border-slate-300 bg-slate-50/50 py-2.5 pl-9 pr-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                                     />
                                 </div>
-                                @error('email')<p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>@enderror
+                                @error('login')<p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>@enderror
                             </div>
 
                             <div>
                                 <div class="flex items-center justify-between">
-                                    <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
+                                    <label for="password" class="block text-sm font-medium text-slate-700">Kata Sandi</label>
                                     @if (\Illuminate\Support\Facades\Route::has('password.request'))
                                         <a href="{{ route('password.request') }}" class="text-xs font-medium text-blue-600 hover:text-blue-500">Forgot?</a>
                                     @endif
@@ -115,10 +93,10 @@
                                 @error('password')<p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>@enderror
                             </div>
 
-                            <div class="flex items-center justify-between">
+                            <div class="flex items-center justify-between pl-4">
                                 <div class="flex items-center">
-                                    <input type="checkbox" name="remember" id="remember" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" {{ old('remember') ? 'checked' : '' }}>
-                                    <label for="remember" class="ml-2 text-sm text-slate-700">Remember me</label>
+                                    <input type="checkbox" name="showpassword" id="showpassword" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" {{ old('showpassword') ? 'checked' : '' }}>
+                                    <label for="showpassword" class="ml-2 text-sm text-slate-700">Perlihatkan Kata Sandi</label>
                                 </div>
                             </div>
 
@@ -130,7 +108,7 @@
 
                             <button type="submit"
                                 class="group relative flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-slate-900/20 active:scale-[0.98]">
-                                <span class="relative z-10">Sign in</span>
+                                <span class="relative z-10">Log In</span>
                                 <div class="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 transition-opacity group-hover:opacity-100"></div>
                             </button>
                         </div>
@@ -143,6 +121,19 @@
             </div>
         </div>
     </main>
+
+    <script>
+        const showPasswordCheckbox = document.getElementById('showpassword');
+        const passwordInput = document.getElementById('password');
+
+        showPasswordCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                passwordInput.type = 'text';
+            } else {
+                passwordInput.type = 'password';
+            }
+        });
+    </script>
 </body>
 
 </html>
