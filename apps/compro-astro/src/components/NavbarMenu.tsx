@@ -51,7 +51,7 @@ export default function NavbarMenu({ items, marketplaceHref }: NavbarMenuProps) 
 		<div className="relative">
 			<button
 				type="button"
-				className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+				className="inline-flex h-10 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-sm font-semibold text-black hover:bg-gray-50"
 				aria-label="Buka menu"
 				aria-expanded={open}
 				aria-controls="navbar-mobile-panel"
@@ -92,7 +92,7 @@ export default function NavbarMenu({ items, marketplaceHref }: NavbarMenuProps) 
 						<div className="text-sm font-semibold text-slate-900">Menu</div>
 						<button
 							type="button"
-							className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+							className="inline-flex h-10 items-center justify-center rounded-2xl border border-gray-200 bg-white px-3 text-sm font-semibold text-black hover:bg-gray-50"
 							onClick={() => setOpen(false)}
 						>
 							Tutup
@@ -115,14 +115,14 @@ export default function NavbarMenu({ items, marketplaceHref }: NavbarMenuProps) 
 					<div className="mt-4 grid grid-cols-2 gap-2">
 						<a
 							href="/login"
-							className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+							className="inline-flex h-11 items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-black hover:bg-gray-50"
 							onClick={() => setOpen(false)}
 						>
 							Login
 						</a>
 						<a
 							href="/register"
-							className="inline-flex h-11 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+							className="inline-flex h-11 items-center justify-center rounded-2xl bg-black px-4 text-sm font-semibold text-white hover:bg-gray-900"
 							onClick={() => setOpen(false)}
 						>
 							Daftar

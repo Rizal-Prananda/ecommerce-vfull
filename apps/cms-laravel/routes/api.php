@@ -1,9 +1,114 @@
 <?php
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
+    return response()->json(['ok' => true]);
+});
+
+Route::post('/register', function (Request $request) {
+    $validated = $request->validate([
+        'namalengkap_pelanggan' => ['required', 'string', 'max:255'],
+        'notelepon_pelanggan' => ['required', 'string', 'max:30'],
+        'email_pelanggan' => ['required', 'string', 'email', 'max:255', 'unique:Pelanggan,email_pelanggan'],
+        'alamat_pelanggan' => ['nullable', 'string', 'max:2000'],
+        'password' => ['required', 'string', 'min:8', 'confirmed'],
+    ]);
+
+    $now = now()->toDateTimeString();
+    $email = mb_strtolower(trim((string) $validated['email_pelanggan']));
+
+    $id = DB::connection('sqlite')->table('Pelanggan')->insertGetId([
+        'namalengkap_pelanggan' => $validated['namalengkap_pelanggan'],
+        'email_pelanggan' => $email,
+        'notelepon_pelanggan' => $validated['notelepon_pelanggan'],
+        'alamat_pelanggan' => $validated['alamat_pelanggan'] ?? null,
+        'password' => Hash::make($validated['password']),
+        'createdAt' => $now,
+        'last_update' => $now,
+        'last_update_password' => $now,
+    ]);
+
+    return response()->json([
+        'ok' => true,
+        'message' => 'Daftar berhasil',
+        'data' => [
+            'id_pelanggan' => (int) $id,
+        ],
+    ], 201);
+});
+
+Route::post('/login', function (Request $request) {
+    $validated = $request->validate([
+        'email_pelanggan' => ['required', 'string', 'email'],
+        'password' => ['required', 'string'],
+    ]);
+
+    $email = mb_strtolower(trim((string) $validated['email_pelanggan']));
+    $row = DB::connection('sqlite')
+        ->table('Pelanggan')
+        ->whereRaw('lower(email_pelanggan) = ?', [$email])
+        ->first();
+
+    if (!$row || !Hash::check($validated['password'], (string) ($row->password ?? ''))) {
+        return response()->json(['ok' => false, 'message' => 'Email atau password salah'], 401);
+    }
+
+    return response()->json([
+        'ok' => true,
+        'message' => 'Login berhasil',
+        'data' => [
+            'id_pelanggan' => (int) $row->id_pelanggan,
+        ],
+    ]);
+});
+
+Route::get('/user', function (Request $request) {
+    $header = $request->header('Authorization', '');
+    $idHeader = trim((string) $request->header('X-Pelanggan-Id', ''));
+    $idFromHeader = (int) $idHeader;
+
+    $id = 0;
+    if ($idFromHeader > 0) {
+        $id = $idFromHeader;
+    } else {
+        if (preg_match('/^Bearer\s+(.+)$/i', (string) $header, $m)) {
+            $token = trim((string) ($m[1] ?? ''));
+            if (preg_match('/^pelanggan[:\-](\d+)$/i', $token, $m2)) {
+                $id = (int) ($m2[1] ?? 0);
+            } elseif (ctype_digit($token)) {
+                $id = (int) $token;
+            }
+        }
+    }
+
+    if ($id <= 0) {
+        return response()->json(['ok' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $row = DB::connection('sqlite')->table('Pelanggan')->where('id_pelanggan', $id)->first();
+    if (!$row) {
+        return response()->json(['ok' => false, 'message' => 'User tidak ditemukan'], 404);
+    }
+
+    $name = (string) ($row->namalengkap_pelanggan ?? '');
+    $email = (string) ($row->email_pelanggan ?? '');
+    $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($name ?: 'User') . '&background=000000&color=ffffff&size=128';
+
+    return response()->json([
+        'ok' => true,
+        'data' => [
+            'nama_lengkap' => $name,
+            'email' => $email,
+            'avatar' => $avatar,
+        ],
+    ]);
+});
+
+Route::post('/logout', function () {
     return response()->json(['ok' => true]);
 });
 
@@ -133,11 +238,11 @@ Route::get('/products', function (Request $request) {
     ];
 
     if ($categoryId) {
-        $items = array_values(array_filter($items, fn ($x) => (int) $x['categoryId'] === $categoryId));
+        $items = array_values(array_filter($items, fn($x) => (int) $x['categoryId'] === $categoryId));
     }
 
     if ($q !== '') {
-        $items = array_values(array_filter($items, fn ($x) => str_contains(mb_strtolower($x['title']), mb_strtolower($q))));
+        $items = array_values(array_filter($items, fn($x) => str_contains(mb_strtolower($x['title']), mb_strtolower($q))));
     }
 
     return response()->json(['data' => $items]);

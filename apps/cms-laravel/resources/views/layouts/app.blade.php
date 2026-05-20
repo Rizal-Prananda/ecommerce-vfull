@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="id" class="h-full">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
+
 <body class="h-screen bg-slate-50 text-slate-900 antialiased">
     <style>
         [x-cloak] {
@@ -50,19 +52,22 @@
         }
     </style>
 
-    <div id="cms-admin" class="h-screen flex" x-data="{ sidebarOpen: true, openSubmenu: 'produk' }">
-         <aside
-            class="cms-sidebar sticky top-0 z-40 hidden h-screen flex-col relative transition-all duration-300 ease-out md:flex shadow-[8px_0_15px_rgba(0,0,0,0.15)] shadow-black/50"
-            :class="sidebarOpen ? 'w-[300px]' : 'w-[120px]'">
-            <button type="button" @click="sidebarOpen = !sidebarOpen" class="absolute -right-3 top-6 grid h-6 w-6 place-items-center rounded-full border border-gray-200 bg-white text-slate-900 shadow-sm" aria-label="Toggle sidebar">
-                <svg class="size-4 transition-transform" :class="sidebarOpen ? '' : 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <div id="cms-admin" class="h-screen flex" x-data="{ sidebarOpen: true }">
+        <aside
+            class="cms-sidebar sticky top-0 z-40 hidden h-screen flex-col relative transition-all duration-300 ease-out md:flex"
+            :class="sidebarOpen ? 'w-64' : 'w-20'">
+            <button type="button" @click="sidebarOpen = !sidebarOpen"
+                class="absolute -right-3 top-6 grid h-6 w-6 place-items-center rounded-full border border-gray-200 bg-white text-slate-900 shadow-sm"
+                aria-label="Toggle sidebar">
+                <svg class="size-4 transition-transform" :class="sidebarOpen ? '' : 'rotate-180'" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M15 18l-6-6 6-6" />
                 </svg>
             </button>
 
             <div class="cms-sidebar-header flex h-auto flex-col items-center justify-center gap-2 px-4 py-3">
                 <img src="{{ asset('logo.png') }}" alt="Avenue Collective" class="size-20 rounded-xl object-cover shadow-[0_0_15px_rgba(0,0,0,0.15)] shadow-black/50" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
-                
+
                 <div x-show="sidebarOpen" x-transition.opacity.duration.300ms class="leading-tight text-center" x-cloak>
                     <div class="text-sm font-semibold text-white">Avenue Collective</div>
                 </div>
@@ -127,14 +132,14 @@
                         </div>
                     </a>
 
-                    
+                </div>
             </nav>
 
             <div class="border-t border-[var(--cms-border)] p-4"></div>
         </aside>
 
         <div class="flex min-w-0 flex-1 flex-col">
-           <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-gray-200/80 bg-[#0E1F4F] px-6">
+            <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-gray-200/80 bg-[#0E1F4F] px-6">
                 <div class="flex shrink-0 items-center gap-3 ml-auto">
                     <button type="button" class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50" aria-label="Notifications">
                         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -145,26 +150,26 @@
                     </button>
 
                     @php
-                        $me = auth()->user();
-                        $avatarPath = (string) ($me?->avatar_path ?? '');
-                        $avatarLegacy = (string) ($me?->avatar ?? '');
-                        $avatarUrl = '';
-                        if ($avatarPath !== '') {
-                            if (str_starts_with($avatarPath, 'http')) {
-                                $avatarUrl = $avatarPath;
-                            } elseif (str_starts_with($avatarPath, '/uploads/') || str_starts_with($avatarPath, 'uploads/')) {
-                                $avatarUrl = asset(ltrim($avatarPath, '/'));
-                            } elseif (str_starts_with($avatarPath, 'avatars/')) {
-                                $avatarUrl = asset('storage/' . $avatarPath);
-                            } else {
-                                $avatarUrl = asset('storage/' . ltrim($avatarPath, '/'));
-                            }
-                        } elseif ($avatarLegacy !== '') {
-                            $avatarUrl = str_starts_with($avatarLegacy, 'http') ? $avatarLegacy : asset(ltrim($avatarLegacy, '/'));
-                        } else {
-                            $nameForAvatar = trim((string) ($me?->name ?? 'Admin'));
-                            $avatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($nameForAvatar) . '&background=0f172a&color=ffffff&bold=true&size=128';
-                        }
+                    $me = auth()->user();
+                    $avatarPath = (string) ($me?->avatar_path ?? '');
+                    $avatarLegacy = (string) ($me?->avatar ?? '');
+                    $avatarUrl = '';
+                    if ($avatarPath !== '') {
+                    if (str_starts_with($avatarPath, 'http')) {
+                    $avatarUrl = $avatarPath;
+                    } elseif (str_starts_with($avatarPath, '/uploads/') || str_starts_with($avatarPath, 'uploads/')) {
+                    $avatarUrl = asset(ltrim($avatarPath, '/'));
+                    } elseif (str_starts_with($avatarPath, 'avatars/')) {
+                    $avatarUrl = asset('storage/' . $avatarPath);
+                    } else {
+                    $avatarUrl = asset('storage/' . ltrim($avatarPath, '/'));
+                    }
+                    } elseif ($avatarLegacy !== '') {
+                    $avatarUrl = str_starts_with($avatarLegacy, 'http') ? $avatarLegacy : asset(ltrim($avatarLegacy, '/'));
+                    } else {
+                    $nameForAvatar = trim((string) ($me?->name ?? 'Admin'));
+                    $avatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($nameForAvatar) . '&background=0f172a&color=ffffff&bold=true&size=128';
+                    }
                     @endphp
 
                     <div x-data="{ open: false }" class="relative">
@@ -173,13 +178,11 @@
                             @click="open = !open"
                             class="flex items-center gap-3 rounded-full bg-white pl-1 pr-3 py-1 shadow-sm ring-1 ring-black/5 hover:bg-slate-50"
                             :aria-expanded="open"
-                            aria-haspopup="menu"
-                        >
+                            aria-haspopup="menu">
                             <img
-                                src="{{ $avatarUrl }}"
+                                src="{{ (string) ($avatarUrl ?? '') }}"
                                 alt="{{ $me?->name ?? 'Admin' }}"
-                                class="size-9 rounded-full object-cover bg-slate-900 ring-2 ring-slate-100"
-                            />
+                                class="size-9 rounded-full object-cover bg-slate-900 ring-2 ring-slate-100" />
                             <span class="hidden text-sm font-semibold text-slate-900 sm:block">{{ $me?->name ?? 'Admin' }}</span>
                             <svg class="size-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M6 9l6 6 6-6" />
@@ -198,8 +201,7 @@
                             x-transition:leave-start="transform opacity-100 scale-100"
                             x-transition:leave-end="transform opacity-0 scale-95"
                             class="absolute right-0 z-50 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-black/5"
-                            role="menu"
-                        >
+                            role="menu">
                             <div class="px-4 py-3 border-b border-slate-100">
                                 <div class="text-sm font-semibold text-slate-900 truncate">{{ $me?->name ?? 'Admin' }}</div>
                                 <div class="text-xs text-slate-500 truncate">{{ $me?->email ?? '' }}</div>
@@ -211,8 +213,7 @@
                                     @click.stop
                                     class="flex w-full items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
                                     role="menuitem"
-                                    @click="open = false"
-                                >
+                                    @click="open = false">
                                     Update Profile
                                 </a>
 
@@ -221,8 +222,7 @@
                                     <button
                                         type="submit"
                                         class="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                                        role="menuitem"
-                                    >
+                                        role="menuitem">
                                         Logout
                                     </button>
                                 </form>
@@ -238,4 +238,5 @@
         </div>
     </div>
 </body>
+
 </html>

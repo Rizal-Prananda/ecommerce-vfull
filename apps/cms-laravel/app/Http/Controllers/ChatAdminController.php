@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -11,7 +13,7 @@ class ChatAdminController extends Controller
 {
     public function listConversations(): View
     {
-        $conn = DB::connection('customer_sqlite');
+        $conn = DB::connection('sqlite');
 
         $customers = $conn
             ->table('Pelanggan as p')
@@ -59,7 +61,7 @@ class ChatAdminController extends Controller
             abort(404, 'Customer not found');
         }
 
-        $conn = DB::connection('customer_sqlite');
+        $conn = DB::connection('sqlite');
 
         $customers = $conn
             ->table('Pelanggan as p')
@@ -106,27 +108,79 @@ class ChatAdminController extends Controller
         }
 
         $validated = $request->validate([
-            'pesan' => ['required', 'string', 'max:2000'],
+            'pesan' => ['nullable', 'string', 'max:2000'],
+            'attachment' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,webp,gif,pdf'],
         ]);
 
-        $pesan = trim((string) $validated['pesan']);
-        if ($pesan === '') {
-            return back()->withErrors(['pesan' => 'Pesan wajib diisi.']);
-        }
+        $pesan = trim((string) ($validated['pesan'] ?? ''));
 
-        $conn = DB::connection('customer_sqlite');
+        $conn = DB::connection('sqlite');
         $customer = $conn->table('Pelanggan')->where('id_pelanggan', $selectedId)->first();
         if (!$customer) {
             abort(404, 'Customer not found');
         }
 
-        $conn->table('Chat')->insert([
+        $file = $request->file('attachment');
+        $attachmentPath = null;
+        $attachmentOriginalName = null;
+        $attachmentMime = null;
+        $attachmentSize = null;
+
+        if ($file) {
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+            $filename = (string) Str::uuid() . ($ext !== '' ? ".{$ext}" : '');
+            $attachmentPath = $file->storeAs('chat-attachments', $filename, 'public');
+            $attachmentOriginalName = (string) $file->getClientOriginalName();
+            $attachmentMime = (string) ($file->getClientMimeType() ?? '');
+            $attachmentSize = (int) ($file->getSize() ?? 0);
+        }
+
+        if ($pesan === '' && !$file) {
+            return back()->withErrors([
+                'pesan' => 'Isi pesan atau pilih lampiran.',
+            ]);
+        }
+
+        $admin = $request->user();
+        $adminId = (int) ($admin?->id ?? 0);
+        $adminName = trim((string) ($admin?->name ?? 'Admin'));
+
+        $createdAt = now();
+        $chatId = $conn->table('Chat')->insertGetId([
             'id_pelanggan' => $selectedId,
             'pengirim' => 'admin',
+            'pengirim_user_id' => $adminId > 0 ? $adminId : null,
+            'pengirim_nama' => $adminName !== '' ? $adminName : null,
             'pesan' => $pesan,
             'dibaca_admin' => 1,
-            'createdAt' => now(),
-        ]);
+            'createdAt' => $createdAt,
+            'attachment_path' => $attachmentPath,
+            'attachment_original_name' => $attachmentOriginalName,
+            'attachment_mime' => $attachmentMime,
+            'attachment_size' => $attachmentSize,
+        ], 'id_chat');
+
+        if ($request->wantsJson() || $request->expectsJson()) {
+            $attachmentUrl = null;
+            if (is_string($attachmentPath) && $attachmentPath !== '') {
+                $attachmentUrl = Storage::disk('public')->url($attachmentPath);
+            }
+
+            return response()->json([
+                'ok' => true,
+                'data' => [
+                    'id_chat' => (int) $chatId,
+                    'id_pelanggan' => $selectedId,
+                    'pengirim' => 'admin',
+                    'pengirim_nama' => $adminName !== '' ? $adminName : 'Admin',
+                    'pesan' => $pesan,
+                    'createdAt' => $createdAt->toISOString(),
+                    'attachment_url' => $attachmentUrl,
+                    'attachment_original_name' => $attachmentOriginalName,
+                    'attachment_mime' => $attachmentMime,
+                ],
+            ]);
+        }
 
         return redirect("/dashboard/chat/{$selectedId}");
     }

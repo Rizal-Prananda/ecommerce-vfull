@@ -1,5 +1,10 @@
 ---
 import NavbarMenu from './NavbarMenu';
+import UserMenu from './Profile';
+
+type Props = {
+	variant?: 'default' | 'auth';
+};
 
 const items = [
 	{ label: 'Home', href: '#home' },
@@ -9,57 +14,78 @@ const items = [
 ];
 
 const marketplaceHref = '/marketplace';
+
+const { variant = 'default' } = Astro.props as Props;
+
+const pathname = Astro.url.pathname;
+const resolveHref = (href: string) => {
+	if (!href.startsWith('#')) return href;
+	return pathname === '/' ? href : `/${href}`;
+};
+
+const navItems = items.map((x) => ({ ...x, href: resolveHref(x.href) }));
+
+const authCta =
+	pathname === '/login'
+		? { label: 'Daftar', href: '/register', class: 'bg-black text-white hover:bg-gray-900' }
+		: { label: 'Login', href: '/login', class: 'border border-gray-200 bg-white text-black hover:bg-gray-50' };
 ---
 
 <header
 	transition:persist
-	class="sticky top-0 z-[9999] border-b border-slate-200/70 bg-white/75 backdrop-blur supports-[backdrop-filter]:bg-white/65"
+	class="sticky top-0 z-[9999] border-b border-gray-200 bg-white/75 backdrop-blur supports-[backdrop-filter]:bg-white/65"
 >
 	<div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
-		<a href="#home" class="flex items-center gap-2 font-semibold tracking-tight">
-			<span class="grid size-9 place-items-center rounded-2xl bg-blue-600 text-white shadow-sm">R</span>
-			<span class="text-slate-900">Rizal Studio</span>
+		<a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
+			<span class="grid size-9 place-items-center rounded-2xl bg-black text-white">R</span>
+			<span class="text-black">Rizal Studio</span>
 		</a>
 
-		<nav class="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex" aria-label="Primary">
-			{
-				items.map((item) => (
-					<a href={item.href} class="hover:text-slate-900">
-						{item.label}
+		{
+			variant === 'auth' ? (
+				<div class="flex items-center gap-2">
+					<a
+						href={authCta.href}
+						class={`inline-flex h-10 items-center justify-center rounded-2xl px-4 text-sm font-semibold ${authCta.class}`}
+					>
+						{authCta.label}
 					</a>
-				))
-			}
-			<a href={marketplaceHref} class="hover:text-slate-900">Marketplace</a>
-		</nav>
+				</div>
+			) : (
+				<>
+					<nav class="hidden items-center gap-6 text-sm font-medium text-gray-600 md:flex" aria-label="Primary">
+						{
+							navItems.map((item) => (
+								<a href={item.href} class="hover:text-black">
+									{item.label}
+								</a>
+							))
+						}
+						<a href={marketplaceHref} class="hover:text-black">Marketplace</a>
+					</nav>
 
-		<div class="hidden items-center gap-2 md:flex">
-			<a
-				href="/login"
-				class="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
-			>
-				Login
-			</a>
-			<a
-				href="/register"
-				class="inline-flex h-10 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-			>
-				Daftar
-			</a>
-		</div>
+					<div class="hidden items-center gap-2 md:flex">
+						<UserMenu client:load />
+					</div>
 
-		<div id="navbar-react" class="md:hidden">
-			<NavbarMenu client:load items={items} marketplaceHref={marketplaceHref} />
-		</div>
+					<div id="navbar-react" class="md:hidden">
+						<NavbarMenu client:load items={navItems} marketplaceHref={marketplaceHref} />
+					</div>
+				</>
+			)
+		}
 	</div>
 
-	<details id="navbar-nojs" class="hidden md:hidden border-t border-slate-200/70 bg-white/90 backdrop-blur">
+	{
+		variant === 'auth' ? null : (
+			<details id="navbar-nojs" class="hidden md:hidden border-t border-gray-200 bg-white/90 backdrop-blur">
 		<summary class="flex cursor-pointer select-none items-center justify-between px-4 py-3 text-sm font-semibold text-slate-900">
 			Menu
 			<span aria-hidden="true">▾</span>
 		</summary>
 		<nav class="grid gap-1 px-4 pb-4 text-sm font-medium text-slate-700" aria-label="Mobile">
 			{
-				items.map((item) => (
+				navItems.map((item) => (
 					<a href={item.href} class="rounded-xl px-3 py-2 hover:bg-slate-50">
 						{item.label}
 					</a>
@@ -70,19 +96,21 @@ const marketplaceHref = '/marketplace';
 			<div class="mt-2 grid grid-cols-2 gap-2">
 				<a
 					href="/login"
-					class="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+					class="inline-flex h-10 items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-black hover:bg-gray-50"
 				>
 					Login
 				</a>
 				<a
 					href="/register"
-					class="inline-flex h-10 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+					class="inline-flex h-10 items-center justify-center rounded-2xl bg-black px-4 text-sm font-semibold text-white hover:bg-gray-900"
 				>
 					Daftar
 				</a>
 			</div>
 		</nav>
 	</details>
+		)
+	}
 
 	<script is:inline>
 		document.getElementById('navbar-nojs')?.classList.add('hidden');

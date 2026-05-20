@@ -5,9 +5,10 @@ import FloatingChat from '../components/FloatingChat';
 
 type Props = {
 	title?: string;
+	navbarVariant?: 'default' | 'auth';
 };
 
-const { title = 'E-Commerce' } = Astro.props;
+const { title = 'E-Commerce', navbarVariant = 'default' } = Astro.props;
 ---
 
 <html lang="id" class="h-full">
@@ -20,7 +21,7 @@ const { title = 'E-Commerce' } = Astro.props;
 		<title>{title}</title>
 	</head>
 	<body class="min-h-full">
-		<Navbar />
+		<Navbar variant={navbarVariant} />
 		<slot />
 		<FloatingChat client:load />
 	</body>
