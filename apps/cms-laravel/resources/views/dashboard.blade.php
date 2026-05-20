@@ -53,7 +53,7 @@
     <div id="cms-admin" class="h-screen flex" x-data="{ sidebarOpen: true, openSubmenu: 'produk' }">
         <aside
             class="cms-sidebar sticky top-0 z-40 hidden h-screen flex-col relative transition-all duration-300 ease-out md:flex shadow-[8px_0_15px_rgba(0,0,0,0.15)] shadow-black/50"
-            :class="sidebarOpen ? 'w-64' : 'w-20'">
+            :class="sidebarOpen ? 'w-[300px]' : 'w-[120px]'">
             <button type="button" @click="sidebarOpen = !sidebarOpen" class="absolute -right-3 top-6 grid h-6 w-6 place-items-center rounded-full border border-gray-200 bg-white text-slate-900 shadow-sm" aria-label="Toggle sidebar">
                 <svg class="size-4 transition-transform" :class="sidebarOpen ? '' : 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M15 18l-6-6 6-6" />
@@ -62,7 +62,6 @@
 
             <div class="cms-sidebar-header flex h-auto flex-col items-center justify-center gap-2 px-4 py-3">
                 <img src="{{ asset('logo.png') }}" alt="Avenue Collective" class="size-20 rounded-xl object-cover shadow-[0_0_15px_rgba(0,0,0,0.15)] shadow-black/50" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
-                
                 <div x-show="sidebarOpen" x-transition.opacity.duration.300ms class="leading-tight text-center" x-cloak>
                     <div class="text-sm font-semibold text-white">Avenue Collective</div>
                 </div>
@@ -72,7 +71,8 @@
                 <div class="space-y-1 rounded-lg px-3 py-2.5 shadow-[0_0_15px_rgba(0,0,0,0.15)] shadow-black/30">
                     <a
                         href="/dashboard"
-                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard') ? 'cms-menu-active' : '' }}">
+                        class="group relative cms-menu-item flex items-center rounded-lg text-sm font-medium transition-all duration-200 {{ request()->is('dashboard') ? 'cms-menu-active' : '' }}"
+                        :class="sidebarOpen ? 'gap-3 px-3 py-2.5 justify-start' : 'gap-0 px-2 py-2.5 justify-center'">
                         <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 13h8V3H3v10Z" />
                             <path d="M13 21h8V11h-8v10Z" />
@@ -91,7 +91,8 @@
 
                     <a
                         href="/dashboard/users"
-                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard/users*') ? 'cms-menu-active' : '' }}">
+                        class="group relative cms-menu-item flex items-center rounded-lg text-sm font-medium transition-all duration-200 {{ request()->is('dashboard/users*') ? 'cms-menu-active' : '' }}"
+                        :class="sidebarOpen ? 'gap-3 px-3 py-2.5 justify-start' : 'gap-0 px-2 py-2.5 justify-center'">
                         <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                             <circle cx="9" cy="7" r="4" />
@@ -110,7 +111,8 @@
 
                     <a
                         href="/dashboard/chat"
-                        class="group relative cms-menu-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 {{ request()->is('dashboard/chat*') ? 'cms-menu-active' : '' }}">
+                        class="group relative cms-menu-item flex items-center rounded-lg text-sm font-medium transition-all duration-200 {{ request()->is('dashboard/chat*') ? 'cms-menu-active' : '' }}"
+                        :class="sidebarOpen ? 'gap-3 px-3 py-2.5 justify-start' : 'gap-0 px-2 py-2.5 justify-center'">
                         <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" />
                         </svg>
