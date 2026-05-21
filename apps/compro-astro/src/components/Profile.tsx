@@ -81,7 +81,12 @@ export default function UserMenu() {
     } finally {
       window.localStorage.removeItem("token_pelanggan");
       window.localStorage.removeItem("id_pelanggan");
-      window.location.href = "/";
+      const target = `${window.location.origin}/#home`;
+      if (window.location.pathname === "/" && window.location.hash === "#home") {
+        window.location.reload();
+        return;
+      }
+      window.location.replace(target);
     }
   };
 
@@ -150,7 +155,7 @@ export default function UserMenu() {
           </div>
           <div className="p-1">
             <a
-              href="/dashboard"
+              href="/ProfilPelanggan"
               className="flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-black hover:bg-gray-50"
               role="menuitem"
             >

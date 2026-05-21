@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { MessageCircle, Send, X } from "lucide-react";
+import { MessageCircle, Paperclip, Send, X } from "lucide-react";
 
 type ChatMessage = {
   id_chat: number;
@@ -9,6 +9,9 @@ type ChatMessage = {
   pesan: string;
   dibaca_admin: boolean;
   createdAt: string;
+  attachment_path?: string | null;
+  attachment_mime?: string | null;
+  attachment_original_name?: string | null;
 };
 
 function formatTime(iso: string) {
@@ -24,8 +27,15 @@ export default function FloatingChat() {
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hideChatUi, setHideChatUi] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string>("");
+
+  const CMS_BASE = "http://127.0.0.1:8001";
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const lastIdRef = useRef<number>(0);
+  const pollTimerRef = useRef<number | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const getAuth = () => {
     if (typeof window === "undefined") return { token: "", id: 0 };
@@ -57,12 +67,24 @@ export default function FloatingChat() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ block: "end" }), 0);
   }, [open, messages.length]);
 
+  useEffect(() => {
+    if (!photo) {
+      if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+      setPhotoPreviewUrl("");
+      return;
+    }
+    const url = URL.createObjectURL(photo);
+    setPhotoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photo]);
+
   const loadHistory = async () => {
     const auth = getAuth();
     if (!auth.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/chat/history?id_pelanggan=${auth.id}`, {
+      const res = await fetch(`${CMS_BASE}/api/chat/history?id_pelanggan=${auth.id}`, {
         headers: {
           ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
           "X-Pelanggan-Id": String(auth.id),
@@ -72,6 +94,7 @@ export default function FloatingChat() {
       if (!res.ok) throw new Error(json?.message ?? "Gagal memuat chat");
       const items = Array.isArray(json?.data) ? (json.data as ChatMessage[]) : [];
       setMessages(items);
+      lastIdRef.current = items.length ? Number(items[items.length - 1]?.id_chat ?? 0) : 0;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Gagal memuat chat";
       toast.error(msg);
@@ -92,7 +115,7 @@ export default function FloatingChat() {
 
   const send = async () => {
     const payload = text.trim();
-    if (!payload) return;
+    if (!payload && !photo) return;
     const auth = getAuth();
     if (!auth.id) {
       toast.error("Silakan login terlebih dahulu.");
@@ -100,20 +123,41 @@ export default function FloatingChat() {
     }
     setSending(true);
     try {
-      const res = await fetch("/api/chat/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
-          "X-Pelanggan-Id": String(auth.id),
-        },
-        body: JSON.stringify({ id_pelanggan: auth.id, pesan: payload }),
-      });
+      const res = await (async () => {
+        if (photo) {
+          const fd = new FormData();
+          fd.set("id_pelanggan", String(auth.id));
+          fd.set("pesan", payload);
+          fd.set("attachment", photo, photo.name);
+          return fetch(`${CMS_BASE}/api/chat/send`, {
+            method: "POST",
+            headers: {
+              ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+              "X-Pelanggan-Id": String(auth.id),
+            },
+            body: fd,
+          });
+        }
+        return fetch(`${CMS_BASE}/api/chat/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+            "X-Pelanggan-Id": String(auth.id),
+          },
+          body: JSON.stringify({ id_pelanggan: auth.id, pesan: payload }),
+        });
+      })();
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.message ?? "Gagal mengirim pesan");
       const created = json?.data as ChatMessage | undefined;
-      if (created) setMessages((prev) => [...prev, created]);
+      if (created) {
+        lastIdRef.current = Number(created.id_chat ?? lastIdRef.current);
+        setMessages((prev) => [...prev, created]);
+      }
       setText("");
+      setPhoto(null);
+      if (fileRef.current) fileRef.current.value = "";
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Gagal mengirim pesan";
       toast.error(msg);
@@ -121,6 +165,46 @@ export default function FloatingChat() {
       setSending(false);
     }
   };
+
+  useEffect(() => {
+    if (!open) {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      return;
+    }
+
+    const auth = getAuth();
+    if (!auth.id) return;
+
+    const tick = async () => {
+      const afterId = Number(lastIdRef.current ?? 0);
+      try {
+        const res = await fetch(`${CMS_BASE}/api/chat/history?id_pelanggan=${auth.id}&after_id=${afterId}`, {
+          headers: {
+            ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+            "X-Pelanggan-Id": String(auth.id),
+          },
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) return;
+        const items = Array.isArray(json?.data) ? (json.data as ChatMessage[]) : [];
+        if (!items.length) return;
+        lastIdRef.current = Number(items[items.length - 1]?.id_chat ?? lastIdRef.current);
+        setMessages((prev) => [...prev, ...items]);
+      } catch {}
+    };
+
+    void tick();
+    pollTimerRef.current = window.setInterval(() => void tick(), 2500);
+    return () => {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, [open]);
 
   return (
     <>
@@ -176,10 +260,21 @@ export default function FloatingChat() {
                   <div className="flex flex-col gap-2">
                     {messages.map((m) => {
                       const mine = m.pengirim === "pelanggan";
+                      const attachmentPath = String(m.attachment_path ?? "");
+                      const attachmentMime = String(m.attachment_mime ?? "");
+                      const isImage = attachmentPath && attachmentMime.startsWith("image/");
+                      const attachmentUrl = attachmentPath
+                        ? `${CMS_BASE}/storage/${attachmentPath.replace(/^\/+/, "")}`
+                        : "";
                       return (
                         <div key={m.id_chat} className={mine ? "flex justify-end" : "flex justify-start"}>
                           <div className={["max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow-sm", mine ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-900"].join(" ")}>
-                            <div className="whitespace-pre-wrap leading-6">{m.pesan}</div>
+                            {isImage && attachmentUrl ? (
+                              <a href={attachmentUrl} target="_blank" rel="noreferrer" className="block">
+                                <img src={attachmentUrl} alt={m.attachment_original_name ?? "Foto"} className="mb-2 max-h-56 w-full rounded-xl object-cover" />
+                              </a>
+                            ) : null}
+                            {m.pesan ? <div className="whitespace-pre-wrap leading-6">{m.pesan}</div> : null}
                             <div className={mine ? "mt-1 text-[11px] text-white/80" : "mt-1 text-[11px] text-slate-500"}>{formatTime(m.createdAt)}</div>
                           </div>
                         </div>
@@ -193,7 +288,58 @@ export default function FloatingChat() {
               </div>
 
               <div className="border-t border-slate-200 bg-white/90 px-3 py-3">
+                {photo ? (
+                  <div className="mb-2 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="h-10 w-10 overflow-hidden rounded-xl bg-slate-100">
+                        {photoPreviewUrl ? <img src={photoPreviewUrl} alt="Preview" className="h-full w-full object-cover" /> : null}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-slate-900">{photo.name}</div>
+                        <div className="text-[11px] text-slate-500">Foto</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhoto(null);
+                        if (fileRef.current) fileRef.current.value = "";
+                      }}
+                      className="grid h-9 w-9 place-items-center rounded-2xl bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      aria-label="Hapus foto"
+                      disabled={sending}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : null}
+
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={sending}
+                    className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label="Tambah foto"
+                  >
+                    <Paperclip className="h-5 w-5" />
+                  </button>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null;
+                      if (!f) return;
+                      if (!String(f.type || "").startsWith("image/")) {
+                        toast.error("File harus berupa foto.");
+                        e.target.value = "";
+                        return;
+                      }
+                      setPhoto(f);
+                    }}
+                  />
                   <input
                     value={text}
                     onChange={(e) => setText(e.target.value)}

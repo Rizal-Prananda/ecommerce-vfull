@@ -1,0 +1,357 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Profil Pelanggan">
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+	<main class="bg-[#F8FAFC] text-gray-900">
+		<div class="mx-auto w-full max-w-7xl px-4 py-8 [font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe_UI,Roboto,Helvetica,Arial]">
+			<div class="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+				<aside class="h-fit rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+					<div class="border-b border-gray-100 pb-5">
+						<div class="flex items-center justify-between gap-3">
+							<div class="flex items-center gap-3">
+								<div class="grid size-12 overflow-hidden rounded-full bg-gray-100 ring-2 ring-blue-50">
+									<img data-profile="sidebarAvatar" src="https://ui-avatars.com/api/?name=User&background=000000&color=ffffff&size=128" alt="Avatar" class="h-full w-full object-cover" />
+								</div>
+								<div class="min-w-0">
+									<div data-profile="sidebarName" class="truncate text-sm font-semibold text-gray-900">User</div>
+									<button type="button" class="mt-0.5 text-left text-xs font-semibold text-[#1A56DB] transition-all hover:underline active:scale-95">Ubah Profil</button>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<nav class="mt-4 grid gap-1" aria-label="Profil Menu">
+						<a
+							href="/ProfilPelanggan?menu=akun"
+							data-profile-menu="akun"
+							class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all"
+						>
+							<svg data-profile-icon="akun" class="h-5 w-5 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+								<circle cx="12" cy="7" r="4" />
+							</svg>
+							<span class="flex-1">Akun Saya</span>
+						</a>
+						<a
+							href="/PesananSaya?menu=pesanan"
+							data-profile-menu="pesanan"
+							class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
+						>
+							<svg data-profile-icon="pesanan" class="h-5 w-5 text-gray-400 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M6 2h12l3 7-4 12H7L3 9l3-7Z" />
+								<path d="M3 9h18" />
+								<path d="M9 13h6" />
+							</svg>
+							<span class="flex-1">Pesanan Saya</span>
+						</a>
+					</nav>
+				</aside>
+
+				<section class="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
+					<div class="border-b border-gray-100 pb-5">
+						<div class="text-xl font-semibold text-gray-900">Profil Saya</div>
+						<div class="mt-1 text-sm text-gray-500">Kelola informasi akun kamu untuk pengalaman yang lebih personal.</div>
+						<div data-profile="loadMsg" class="mt-3 hidden rounded-xl border border-blue-100 bg-[#EFF6FF] px-4 py-3 text-sm text-[#1A56DB]"></div>
+					</div>
+
+					<div class="mt-8 grid gap-8 lg:grid-cols-[1fr_240px]">
+						<div class="grid gap-5">
+							<div class="space-y-2">
+								<label for="profile-name" class="text-sm font-medium text-gray-700">Nama</label>
+								<input id="profile-name" data-profile="fullNameInput" type="text" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 transition focus:border-[#1A56DB] focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20" />
+							</div>
+
+							<div class="space-y-2">
+								<label for="profile-email" class="text-sm font-medium text-gray-700">Email</label>
+								<input id="profile-email" data-profile="emailInput" type="email" disabled class="w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-500 placeholder-gray-400 transition focus:border-[#1A56DB] focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20" />
+							</div>
+
+							<div class="space-y-2">
+								<label for="profile-phone" class="text-sm font-medium text-gray-700">Nomor Telepon</label>
+								<input id="profile-phone" data-profile="phoneInput" type="text" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 transition focus:border-[#1A56DB] focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20" />
+							</div>
+
+							<div class="space-y-2">
+								<label for="profile-alamat" class="text-sm font-medium text-gray-700">Alamat</label>
+								<textarea id="profile-alamat" data-profile="alamatInput" rows="3" class="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 transition focus:border-[#1A56DB] focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20"></textarea>
+							</div>
+
+							<div class="pt-2">
+								<button data-profile="saveBtn" type="button" class="rounded-xl bg-[#1A56DB] px-8 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-500/20 transition-all hover:bg-[#1E40AF] hover:shadow-md active:scale-95">
+									Simpan
+								</button>
+								<div data-profile="saveMsg" class="mt-2 hidden text-xs font-semibold text-[#1A56DB]"></div>
+							</div>
+						</div>
+
+						<div class="lg:border-l lg:border-gray-100 lg:pl-8">
+							<div class="mb-4 text-sm font-medium text-gray-700">Avatar</div>
+							<div class="mt-4 flex flex-col items-start gap-3">
+								<div class="group relative">
+									<div class="grid size-28 overflow-hidden rounded-full ring-4 ring-blue-50">
+										<img data-profile="avatarLarge" src="https://ui-avatars.com/api/?name=User&background=000000&color=ffffff&size=256" alt="Avatar" class="h-full w-full object-cover bg-gray-100" />
+									</div>
+									<label for="avatar-input" class="absolute inset-0 grid cursor-pointer place-items-center rounded-full bg-black/40 opacity-0 transition-all group-hover:opacity-100">
+										<svg viewBox="0 0 24 24" class="h-7 w-7 text-white" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-2h6l2 2h4a2 2 0 0 1 2 2Z" />
+											<circle cx="12" cy="13" r="4" />
+										</svg>
+									</label>
+								</div>
+
+								<input id="avatar-input" data-profile="avatarInput" type="file" accept="image/jpeg,image/png" class="hidden" />
+
+								<label for="avatar-input" class="inline-flex cursor-pointer items-center justify-center rounded-xl border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 active:scale-95">
+									Pilih Gambar
+								</label>
+								<div class="mt-3 text-xs text-gray-500">Ukuran gambar: maks. 1 MB Format:.JPEG,.PNG</div>
+								<div data-profile="avatarMsg" class="hidden text-xs font-semibold text-[#1A56DB]"></div>
+							</div>
+						</div>
+					</div>
+				</section>
+			</div>
+		</div>
+	</main>
+
+	<script is:inline data-astro-rerun>
+		(function () {
+			const menu = new URLSearchParams(window.location.search).get('menu') || 'akun';
+			if (menu === 'pesanan') {
+				window.location.replace('/PesananSaya?menu=pesanan');
+				return;
+			}
+
+			const markMenu = () => {
+				const akun = document.querySelector('[data-profile-menu="akun"]');
+				const pesanan = document.querySelector('[data-profile-menu="pesanan"]');
+				const styleActive = (el, icon) => {
+					if (!el) return;
+					el.classList.add('bg-[#EFF6FF]', 'text-[#1A56DB]', 'font-semibold');
+					el.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
+					if (icon) {
+						icon.classList.add('text-[#1A56DB]');
+						icon.classList.remove('text-gray-400');
+					}
+				};
+				const styleInactive = (el, icon) => {
+					if (!el) return;
+					el.classList.remove('bg-[#EFF6FF]', 'text-[#1A56DB]', 'font-semibold');
+					el.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
+					if (icon) {
+						icon.classList.remove('text-[#1A56DB]');
+						icon.classList.add('text-gray-400');
+					}
+				};
+				styleActive(akun, document.querySelector('[data-profile-icon="akun"]'));
+				styleInactive(pesanan, document.querySelector('[data-profile-icon="pesanan"]'));
+			};
+
+			markMenu();
+
+			const getAuth = () => {
+				const token = window.localStorage.getItem('token_pelanggan') || '';
+				const id = window.localStorage.getItem('id_pelanggan') || '';
+				return { token, id };
+			};
+
+			const loadMsg = document.querySelector('[data-profile="loadMsg"]');
+			const setLoadMsg = (t) => {
+				if (!loadMsg) return;
+				const text = String(t || '').trim();
+				if (!text) {
+					loadMsg.classList.add('hidden');
+					loadMsg.textContent = '';
+					return;
+				}
+				loadMsg.textContent = text;
+				loadMsg.classList.remove('hidden');
+			};
+
+			const setText = (sel, v) => {
+				const el = document.querySelector(sel);
+				if (el) el.textContent = v;
+			};
+
+			const setAvatar = (url) => {
+				const img1 = document.querySelector('[data-profile="sidebarAvatar"]');
+				const img2 = document.querySelector('[data-profile="avatarLarge"]');
+				if (img1) img1.setAttribute('src', url);
+				if (img2) img2.setAttribute('src', url);
+			};
+
+			const loadUser = async () => {
+				const auth = getAuth();
+				if (!auth.token && !auth.id) {
+					setLoadMsg('Kamu belum login, jadi data profil tidak bisa dimuat.');
+					return;
+				}
+				const res = await fetch(auth.id ? `/api/user?id_pelanggan=${encodeURIComponent(String(auth.id))}` : '/api/user', {
+					headers: {
+						...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+						...(auth.id ? { 'X-Pelanggan-Id': auth.id } : {})
+					}
+				}).catch(() => null);
+				const json = res ? await res.json().catch(() => null) : null;
+				if (!res || !res.ok || !json?.ok) {
+					setLoadMsg(String(json?.message ?? 'Gagal memuat profil dari server.'));
+					return;
+				}
+				setLoadMsg('');
+
+				const name = String(json?.data?.nama_lengkap ?? '').trim() || 'User';
+				const email = String(json?.data?.email ?? '').trim();
+				const phone = String(json?.data?.telepon ?? '').trim();
+				const avatar = String(json?.data?.avatar ?? '').trim();
+				const alamat = String(json?.data?.alamat ?? '').trim();
+
+				setText('[data-profile="sidebarName"]', name);
+				setText('[data-navbar-auth="name"]', name);
+
+				const input = document.querySelector('[data-profile="fullNameInput"]');
+				if (input && input instanceof HTMLInputElement) input.value = name;
+				const emailInput = document.querySelector('[data-profile="emailInput"]');
+				if (emailInput && emailInput instanceof HTMLInputElement) emailInput.value = email;
+				const phoneInput = document.querySelector('[data-profile="phoneInput"]');
+				if (phoneInput && phoneInput instanceof HTMLInputElement) phoneInput.value = phone;
+				const alamatInput = document.querySelector('[data-profile="alamatInput"]');
+				if (alamatInput && alamatInput instanceof HTMLTextAreaElement) alamatInput.value = alamat;
+
+				if (avatar) setAvatar(avatar);
+
+				try {
+					window.localStorage.setItem('user', JSON.stringify({ name, avatarUrl: avatar }));
+				} catch {}
+				window.dispatchEvent(new Event('user:changed'));
+			};
+
+			void loadUser();
+
+			const avatarInput = document.querySelector('[data-profile="avatarInput"]');
+			const pickBtn = document.querySelector('[data-profile="pickAvatarBtn"]');
+			const msg = document.querySelector('[data-profile="avatarMsg"]');
+
+			const setMsg = (t) => {
+				if (!msg) return;
+				const text = String(t || '').trim();
+				if (!text) {
+					msg.classList.add('hidden');
+					msg.textContent = '';
+					return;
+				}
+				msg.textContent = text;
+				msg.classList.remove('hidden');
+			};
+
+			pickBtn?.addEventListener('click', () => {
+				if (avatarInput && avatarInput instanceof HTMLInputElement) avatarInput.click();
+			});
+
+			avatarInput?.addEventListener('change', async (e) => {
+				const file = e?.target?.files?.[0];
+				if (!file) return;
+				if (file.size > 1024 * 1024) {
+					setMsg('Ukuran gambar maksimal 1 MB.');
+					e.target.value = '';
+					return;
+				}
+
+				const auth = getAuth();
+				const fd = new FormData();
+				fd.set('avatar', file, file.name);
+				setMsg('Mengunggah...');
+
+				const res = await fetch('/api/user/avatar', {
+					method: 'POST',
+					headers: {
+						...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+						...(auth.id ? { 'X-Pelanggan-Id': auth.id } : {})
+					},
+					body: fd
+				}).catch(() => null);
+				const json = res ? await res.json().catch(() => null) : null;
+				if (!res || !res.ok || !json?.ok) {
+					setMsg(String(json?.message ?? 'Gagal upload avatar'));
+					return;
+				}
+				const avatar = String(json?.data?.avatar ?? '').trim();
+				if (avatar) setAvatar(avatar);
+				setMsg('Avatar berhasil diperbarui.');
+				try {
+					const raw = window.localStorage.getItem('user');
+					const obj = raw ? JSON.parse(raw) : {};
+					const name = String(obj?.name ?? '').trim() || String(document.querySelector('[data-profile="sidebarName"]')?.textContent ?? 'User');
+					window.localStorage.setItem('user', JSON.stringify({ name, avatarUrl: avatar }));
+				} catch {}
+				window.dispatchEvent(new Event('user:changed'));
+			});
+
+			const saveBtn = document.querySelector('[data-profile="saveBtn"]');
+			const saveMsg = document.querySelector('[data-profile="saveMsg"]');
+			const setSaveMsg = (t) => {
+				if (!saveMsg) return;
+				const text = String(t || '').trim();
+				if (!text) {
+					saveMsg.classList.add('hidden');
+					saveMsg.textContent = '';
+					return;
+				}
+				saveMsg.textContent = text;
+				saveMsg.classList.remove('hidden');
+			};
+
+			saveBtn?.addEventListener('click', async () => {
+				const auth = getAuth();
+				const fullNameInput = document.querySelector('[data-profile="fullNameInput"]');
+				const phoneInput = document.querySelector('[data-profile="phoneInput"]');
+				const alamatInput = document.querySelector('[data-profile="alamatInput"]');
+				const name = fullNameInput instanceof HTMLInputElement ? fullNameInput.value.trim() : '';
+				const phone = phoneInput instanceof HTMLInputElement ? phoneInput.value.trim() : '';
+				const alamat = alamatInput instanceof HTMLTextAreaElement ? alamatInput.value.trim() : '';
+
+				if (!name) {
+					setSaveMsg('Nama wajib diisi.');
+					return;
+				}
+
+				setSaveMsg('Menyimpan...');
+				if (saveBtn instanceof HTMLButtonElement) saveBtn.disabled = true;
+
+				const res = await fetch('/api/user/update', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+						...(auth.id ? { 'X-Pelanggan-Id': auth.id } : {})
+					},
+					body: JSON.stringify({ nama_lengkap: name, telepon: phone, alamat })
+				}).catch(() => null);
+				const json = res ? await res.json().catch(() => null) : null;
+
+				if (!res || !res.ok || !json?.ok) {
+					setSaveMsg(String(json?.message ?? 'Gagal menyimpan profil'));
+					if (saveBtn instanceof HTMLButtonElement) saveBtn.disabled = false;
+					return;
+				}
+
+				setSaveMsg('Profil berhasil diperbarui.');
+				setText('[data-profile="sidebarName"]', name);
+				setText('[data-navbar-auth="name"]', name);
+
+				const avatarUrl = String(json?.data?.avatar ?? '').trim();
+				if (avatarUrl) setAvatar(avatarUrl);
+				try {
+					window.localStorage.setItem('user', JSON.stringify({ name, avatarUrl }));
+				} catch {}
+				window.dispatchEvent(new Event('user:changed'));
+
+				if (saveBtn instanceof HTMLButtonElement) saveBtn.disabled = false;
+			});
+		})();
+	</script>
+</Layout>

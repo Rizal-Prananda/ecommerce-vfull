@@ -33,6 +33,31 @@ export default function LoginForm() {
         window.localStorage.setItem("token_pelanggan", `pelanggan:${id}`);
       }
 
+      // Simpan ringkasan user untuk Navbar Astro (localStorage key: "user")
+      // Format: { name, avatarUrl }
+      try {
+        const fromLoginName = String(json?.data?.nama_lengkap ?? "").trim();
+        const fromLoginAvatar = String(json?.data?.avatar ?? "").trim();
+        const fallbackName = Number.isInteger(id) && id > 0 ? `Pelanggan #${id}` : "Pelanggan";
+        window.localStorage.setItem("user", JSON.stringify({ name: fromLoginName || fallbackName, avatarUrl: fromLoginAvatar || "" }));
+
+        if (!fromLoginName && Number.isInteger(id) && id > 0) {
+          const token = `pelanggan:${id}`;
+          const userRes = await fetch("/api/user", {
+            headers: { Authorization: `Bearer ${token}`, "X-Pelanggan-Id": String(id) },
+          });
+          const userJson = await userRes.json().catch(() => null);
+          const name = String(userJson?.data?.nama_lengkap ?? "").trim();
+          const avatarUrl = String(userJson?.data?.avatar ?? "").trim();
+          if (name) window.localStorage.setItem("user", JSON.stringify({ name, avatarUrl }));
+        }
+      } catch {}
+
+      // Biar Navbar / komponen lain langsung update tanpa perlu nunggu remount.
+      try {
+        window.dispatchEvent(new Event("user:changed"));
+      } catch {}
+
       try {
         window.sessionStorage.setItem("flash_toast", JSON.stringify({ type: "success", message: "Login berhasil" }));
       } catch {}

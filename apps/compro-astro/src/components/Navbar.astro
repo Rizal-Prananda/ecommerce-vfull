@@ -1,6 +1,7 @@
 ---
 import NavbarMenu from './NavbarMenu';
-import UserMenu from './Profile';
+import ProfileDropdown from './ProfileDropdown.astro';
+import CartButton from './CartButton.astro';
 
 type Props = {
 	variant?: 'default' | 'auth';
@@ -24,11 +25,6 @@ const resolveHref = (href: string) => {
 };
 
 const navItems = items.map((x) => ({ ...x, href: resolveHref(x.href) }));
-
-const authCta =
-	pathname === '/login'
-		? { label: 'Daftar', href: '/register', class: 'bg-black text-white hover:bg-gray-900' }
-		: { label: 'Login', href: '/login', class: 'border border-gray-200 bg-white text-black hover:bg-gray-50' };
 ---
 
 <header
@@ -43,13 +39,26 @@ const authCta =
 
 		{
 			variant === 'auth' ? (
-				<div class="flex items-center gap-2">
+				<div id="navbar-auth-actions" class="flex items-center gap-2">
+					<!-- Tombol default (sebelum JS cek localStorage.user) -->
 					<a
-						href={authCta.href}
-						class={`inline-flex h-10 items-center justify-center rounded-2xl px-4 text-sm font-semibold ${authCta.class}`}
+						data-navbar-auth="login"
+						href="/login"
+						class="inline-flex h-10 items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-black hover:bg-gray-50"
 					>
-						{authCta.label}
+						Login
 					</a>
+					<a
+						data-navbar-auth="register"
+						href="/register"
+						class="inline-flex h-10 items-center justify-center rounded-2xl bg-black px-4 text-sm font-semibold text-white hover:bg-gray-900"
+					>
+						Daftar
+					</a>
+
+					<!-- Area user login (disembunyikan dulu, nanti JS nyalain kalau ada localStorage.user) -->
+					<CartButton />
+					<ProfileDropdown />
 				</div>
 			) : (
 				<>
@@ -64,8 +73,26 @@ const authCta =
 						<a href={marketplaceHref} class="hover:text-black">Marketplace</a>
 					</nav>
 
-					<div class="hidden items-center gap-2 md:flex">
-						<UserMenu client:load />
+					<div id="navbar-auth-actions" class="hidden items-center gap-2 md:flex">
+						<!-- Tombol default (sebelum JS cek localStorage.user) -->
+						<a
+							data-navbar-auth="login"
+							href="/login"
+							class="inline-flex h-10 items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-black hover:bg-gray-50"
+						>
+							Login
+						</a>
+						<a
+							data-navbar-auth="register"
+							href="/register"
+							class="inline-flex h-10 items-center justify-center rounded-2xl bg-black px-4 text-sm font-semibold text-white hover:bg-gray-900"
+						>
+							Daftar
+						</a>
+
+						<!-- Area user login (disembunyikan dulu, nanti JS nyalain kalau ada localStorage.user) -->
+						<CartButton />
+						<ProfileDropdown />
 					</div>
 
 					<div id="navbar-react" class="md:hidden">
@@ -112,7 +139,169 @@ const authCta =
 		)
 	}
 
-	<script is:inline>
+	<script is:inline data-astro-rerun>
 		document.getElementById('navbar-nojs')?.classList.add('hidden');
+	</script>
+
+	<script is:inline data-astro-rerun>
+		// Navbar auth state (Login/Daftar vs User dropdown)
+		// Sumber login: localStorage key "user" -> { name, avatarUrl }
+		(function () {
+			const root = document.getElementById('navbar-auth-actions');
+			if (!root) return;
+
+			const elLogin = root.querySelector('[data-navbar-auth="login"]');
+			const elRegister = root.querySelector('[data-navbar-auth="register"]');
+			const elUserWrap = root.querySelector('[data-navbar-auth="user"]');
+			const elToggle = root.querySelector('[data-navbar-auth="toggle"]');
+			const elAvatar = root.querySelector('[data-navbar-auth="avatar"]');
+			const elAvatarMenuImg = root.querySelector('[data-navbar-auth="avatarMenuImg"]');
+			const elName = root.querySelector('[data-navbar-auth="name"]');
+			const elMenuName = root.querySelector('[data-navbar-auth="menuName"]');
+			const elLogout = root.querySelector('[data-navbar-auth="logout"]');
+
+			const setVisible = (el, visible) => {
+				if (!el) return;
+				if (visible) {
+					el.classList.remove('hidden');
+					el.removeAttribute('hidden');
+					el.style.display = '';
+				} else {
+					el.classList.add('hidden');
+					el.setAttribute('hidden', 'true');
+					el.style.display = 'none';
+				}
+			};
+
+			const readUser = () => {
+				try {
+					const raw = window.localStorage.getItem('user');
+					if (!raw) return null;
+					const obj = JSON.parse(raw);
+					const name = String(obj?.name ?? '').trim();
+					const avatarUrl = String(obj?.avatarUrl ?? '').trim();
+					if (!name) return null;
+					return { name, avatarUrl };
+				} catch {
+					return null;
+				}
+			};
+
+			const applyLoggedOut = () => {
+				setVisible(elLogin, true);
+				setVisible(elRegister, true);
+				setVisible(elUserWrap, false);
+				if (elToggle) elToggle.setAttribute('aria-expanded', 'false');
+			};
+
+			const applyUser = (user) => {
+				if (!user || !elLogin || !elRegister || !elUserWrap || !elName || !elMenuName) return;
+				setVisible(elLogin, false);
+				setVisible(elRegister, false);
+				setVisible(elUserWrap, true);
+				elName.textContent = user.name;
+				elMenuName.textContent = user.name;
+
+				// Avatar: pakai image kalau ada url, kalau tidak pakai inisial.
+				if (elAvatar) {
+					if (user.avatarUrl) {
+						const img = document.createElement('img');
+						img.src = user.avatarUrl;
+						img.alt = user.name;
+						img.className = 'h-full w-full object-cover bg-gray-100';
+						elAvatar.textContent = '';
+						elAvatar.appendChild(img);
+					} else {
+						elAvatar.textContent = String(user.name).trim().slice(0, 1).toUpperCase() || 'U';
+					}
+				}
+
+				if (elAvatarMenuImg && user.avatarUrl) {
+					elAvatarMenuImg.setAttribute('src', user.avatarUrl);
+					elAvatarMenuImg.setAttribute('alt', user.name);
+				}
+			};
+
+			const refreshAuthUi = () => {
+				// Render state (default: Login/Daftar tampil)
+				const user = readUser();
+				if (user) {
+					applyUser(user);
+					// Kalau yang tersimpan masih email, coba refresh dari API biar jadi nama lengkap.
+					const token = window.localStorage.getItem('token_pelanggan') || '';
+					const pelangganId = window.localStorage.getItem('id_pelanggan') || '';
+					const shouldRefreshName = String(user.name).includes('@') || /^pelanggan\s*#/i.test(String(user.name));
+					if (token && shouldRefreshName) {
+						fetch('/api/user', {
+							headers: {
+								Authorization: `Bearer ${token}`,
+								...(pelangganId ? { 'X-Pelanggan-Id': pelangganId } : {})
+							}
+						})
+							.then((r) => r.json().catch(() => null))
+							.then((j) => {
+								const name = String(j?.data?.nama_lengkap ?? '').trim();
+								const avatarUrl = String(j?.data?.avatar ?? '').trim();
+								if (!name) return;
+								try {
+									window.localStorage.setItem('user', JSON.stringify({ name, avatarUrl }));
+								} catch {}
+								applyUser({ name, avatarUrl });
+							})
+							.catch(() => {});
+					}
+					return;
+				}
+
+				applyLoggedOut();
+
+				// Fallback: kalau token_pelanggan ada (chat sudah login) tapi localStorage.user belum keisi,
+				// ambil data user dari /api/user biar Navbar ikut update.
+				const token = window.localStorage.getItem('token_pelanggan') || '';
+				const pelangganId = window.localStorage.getItem('id_pelanggan') || '';
+				if (!token) return;
+
+				fetch('/api/user', {
+					headers: {
+						Authorization: `Bearer ${token}`,
+						...(pelangganId ? { 'X-Pelanggan-Id': pelangganId } : {})
+					}
+				})
+					.then((r) => r.json().catch(() => null))
+					.then((j) => {
+						const name = String(j?.data?.nama_lengkap ?? '').trim();
+						const avatarUrl = String(j?.data?.avatar ?? '').trim();
+						if (!name) return;
+						try {
+							window.localStorage.setItem('user', JSON.stringify({ name, avatarUrl }));
+						} catch {}
+						applyUser({ name, avatarUrl });
+					})
+					.catch(() => {});
+			};
+
+			refreshAuthUi();
+
+			// Update UI kalau login/logout terjadi tanpa reload (misal via view transitions / partial navigation)
+			window.addEventListener('user:changed', refreshAuthUi);
+			window.addEventListener('focus', refreshAuthUi);
+
+			// Logout: hapus localStorage.user lalu reload (sekalian bersihin token chat biar state konsisten)
+			if (elLogout) {
+				elLogout.addEventListener('click', () => {
+					try {
+						window.localStorage.removeItem('user');
+						window.localStorage.removeItem('token_pelanggan');
+						window.localStorage.removeItem('id_pelanggan');
+					} catch {}
+					const target = `${window.location.origin}/#home`;
+					if (window.location.pathname === '/' && window.location.hash === '#home') {
+						window.location.reload();
+						return;
+					}
+					window.location.replace(target);
+				});
+			}
+		})();
 	</script>
 </header>

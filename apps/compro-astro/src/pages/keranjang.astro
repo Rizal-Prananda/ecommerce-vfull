@@ -1,0 +1,141 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+type CartItem = {
+	id: number;
+	name: string;
+	variant: string;
+	price: number;
+	qty: number;
+	image: string;
+};
+
+const cartItems: CartItem[] = [
+	{
+		id: 1,
+		name: 'Seblak Ceker Super Pedas',
+		variant: 'Level 3, Extra Telor',
+		price: 25000,
+		qty: 2,
+		image: 'https://picsum.photos/80'
+	},
+	{
+		id: 2,
+		name: 'Bakso Aci Kuah Pedas',
+		variant: 'Level 5',
+		price: 18000,
+		qty: 1,
+		image: 'https://picsum.photos/80'
+	}
+];
+
+const formatRupiah = (n: number) => `Rp ${Math.max(0, Math.trunc(n)).toLocaleString('id-ID')}`;
+const subtotal = cartItems.reduce((sum, it) => sum + it.price * it.qty, 0);
+const ongkir = cartItems.length ? 10000 : 0;
+const total = subtotal + ongkir;
+---
+
+<Layout title="Keranjang Belanja">
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+	<main class="min-h-screen bg-[#F8FAFC] pb-24 text-gray-800">
+		<div class="mx-auto max-w-7xl px-4 py-8 lg:px-8 [font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe_UI,Roboto,Helvetica,Arial]">
+			<header class="mb-6">
+				<div class="text-2xl font-semibold text-gray-900">Keranjang Belanja</div>
+				<div class="mt-1 text-sm text-gray-500">{cartItems.length} item</div>
+			</header>
+
+			{
+				cartItems.length === 0 ? (
+					<section class="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
+						<div class="flex flex-col items-center justify-center py-16 text-center">
+							<svg viewBox="0 0 24 24" class="h-16 w-16 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5">
+								<circle cx="9" cy="21" r="1" />
+								<circle cx="20" cy="21" r="1" />
+								<path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.65 16H19a2 2 0 0 0 2-1.65L23 6H6" />
+							</svg>
+							<div class="mt-4 text-lg font-semibold text-gray-900">Keranjang kamu kosong</div>
+							<div class="mt-1 text-sm text-gray-500">Yuk, mulai belanja dan isi keranjangmu!</div>
+							<a href="/#home" class="mt-6 inline-flex rounded-xl bg-[#1A56DB] px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#1E40AF] active:scale-95">
+								Mulai Belanja
+							</a>
+						</div>
+					</section>
+				) : (
+					<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
+						<section class="space-y-4">
+							{cartItems.map((it) => (
+								<div class="flex gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+									<img src={it.image} alt={it.name} class="h-20 w-20 rounded-xl object-cover" loading="lazy" />
+									<div class="min-w-0 flex-1">
+										<div class="truncate text-sm font-semibold text-gray-900">{it.name}</div>
+										<div class="mt-0.5 text-xs text-gray-500">{it.variant}</div>
+										<div class="mt-2 text-sm font-semibold text-[#1A56DB]">{formatRupiah(it.price)}</div>
+									</div>
+
+									<div class="flex items-center gap-2">
+										<button type="button" class="rounded-lg border border-gray-200 p-1.5 transition hover:bg-gray-50 active:scale-95" aria-label="Kurangi">
+											<svg viewBox="0 0 24 24" class="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+												<path d="M5 12h14" />
+											</svg>
+										</button>
+										<div class="w-8 text-center text-sm font-medium text-gray-900">{it.qty}</div>
+										<button type="button" class="rounded-lg border border-gray-200 p-1.5 transition hover:bg-gray-50 active:scale-95" aria-label="Tambah">
+											<svg viewBox="0 0 24 24" class="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+												<path d="M12 5v14" />
+												<path d="M5 12h14" />
+											</svg>
+										</button>
+									</div>
+
+									<button type="button" class="ml-auto text-gray-400 transition hover:text-red-500 active:scale-95" aria-label="Hapus">
+										<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M3 6h18" />
+											<path d="M8 6V4h8v2" />
+											<path d="M19 6l-1 14H6L5 6" />
+											<path d="M10 11v6" />
+											<path d="M14 11v6" />
+										</svg>
+									</button>
+								</div>
+							))}
+						</section>
+
+						<aside class="h-fit rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+							<div class="text-base font-semibold text-gray-900">Ringkasan Pesanan</div>
+							<div class="my-4 border-b border-gray-100"></div>
+
+							<div class="space-y-3 text-sm">
+								<div class="flex items-center justify-between">
+									<div class="text-gray-600">Subtotal</div>
+									<div class="font-medium text-gray-900">{formatRupiah(subtotal)}</div>
+								</div>
+								<div class="flex items-center justify-between">
+									<div class="text-gray-600">Ongkir</div>
+									<div class="font-medium text-gray-900">{formatRupiah(ongkir)}</div>
+								</div>
+
+								<div class="my-4 border-b border-gray-100"></div>
+
+								<div class="flex items-center justify-between">
+									<div class="text-base font-semibold text-gray-900">Total</div>
+									<div class="text-base font-semibold text-[#1A56DB]">{formatRupiah(total)}</div>
+								</div>
+							</div>
+
+							<button
+								type="button"
+								class="mt-6 w-full rounded-xl bg-[#1A56DB] py-3 text-sm font-semibold text-white shadow-sm shadow-blue-500/20 transition-all hover:bg-[#1E40AF] hover:shadow-md active:scale-95"
+							>
+								Checkout
+							</button>
+							<div class="mt-3 text-center text-xs text-gray-500">Dengan checkout, kamu setuju dengan S&amp;K kami</div>
+						</aside>
+					</div>
+				)
+			}
+		</div>
+	</main>
+</Layout>

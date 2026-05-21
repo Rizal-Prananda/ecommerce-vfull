@@ -64,7 +64,7 @@ Route::post('/login', function (Request $request) {
     $password = (string) $credentials['password'];
 
     // Try login with email or username
-    $attempt = Auth::attempt(['email' => $login, 'password' => $password], true) 
+    $attempt = Auth::attempt(['email' => $login, 'password' => $password], true)
         || Auth::attempt(['username' => $login, 'password' => $password], true);
 
     if (!$attempt) {
@@ -134,14 +134,16 @@ Route::get('/dashboard/users', function () {
     $role = strtoupper(trim((string) request()->query('role', '')));
 
     $users = User::query()
+        ->select(['id', 'name', 'email', 'username', 'role', 'status', 'avatar_path', 'last_login_at', 'created_at', 'updated_at'])
         ->when($q !== '', function ($qq) use ($q) {
             $qq->where(function ($w) use ($q) {
                 $w->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%");
             });
         })
-        ->when(in_array($role, ['ADMIN', 'CS', 'TEKNISI', 'USER'], true), fn ($qq) => $qq->where('role', $role))
+        ->when(in_array($role, ['ADMIN', 'CS', 'TEKNISI', 'USER'], true), fn($qq) => $qq->where('role', $role))
         ->orderByDesc('created_at')
-        ->get();
+        ->simplePaginate(25)
+        ->withQueryString();
     $roles = ['ADMIN', 'CS', 'TEKNISI', 'USER'];
     return view('users', compact('users', 'roles'));
 })->middleware('admin')->name('users.index');
@@ -255,7 +257,7 @@ Route::get('/dashboard/users/export', function () {
                 $w->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%");
             });
         })
-        ->when(in_array($role, ['ADMIN', 'CS', 'TEKNISI', 'USER'], true), fn ($qq) => $qq->where('role', $role))
+        ->when(in_array($role, ['ADMIN', 'CS', 'TEKNISI', 'USER'], true), fn($qq) => $qq->where('role', $role))
         ->orderByDesc('created_at')
         ->get();
 
@@ -293,5 +295,7 @@ Route::delete('/dashboard/users/{user}', function (Request $request, User $user)
 })->middleware('admin');
 
 Route::get('/dashboard/chat', [\App\Http\Controllers\ChatAdminController::class, 'listConversations'])->middleware('admin');
+Route::get('/dashboard/chat/poll', [\App\Http\Controllers\ChatAdminController::class, 'pollConversations'])->middleware('admin');
 Route::get('/dashboard/chat/{conversationId}', [\App\Http\Controllers\ChatAdminController::class, 'viewConversation'])->middleware('admin');
+Route::get('/dashboard/chat/{conversationId}/poll', [\App\Http\Controllers\ChatAdminController::class, 'pollConversation'])->middleware('admin');
 Route::post('/dashboard/chat/{conversationId}/reply', [\App\Http\Controllers\ChatAdminController::class, 'reply'])->middleware('admin');

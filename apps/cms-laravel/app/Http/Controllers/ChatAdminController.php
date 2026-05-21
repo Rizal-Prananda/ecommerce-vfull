@@ -11,6 +11,63 @@ use Illuminate\View\View;
 
 class ChatAdminController extends Controller
 {
+    public function pollConversations(Request $request)
+    {
+        $conn = DB::connection('sqlite');
+
+        $customers = $conn
+            ->table('Pelanggan as p')
+            ->leftJoin('Chat as c', 'c.id_pelanggan', '=', 'p.id_pelanggan')
+            ->select(
+                'p.id_pelanggan',
+                'p.namalengkap_pelanggan',
+                'p.email_pelanggan',
+                'p.notelepon_pelanggan'
+            )
+            ->selectRaw('MAX(c.createdAt) as last_message_at')
+            ->selectRaw("SUM(CASE WHEN c.pengirim = 'pelanggan' AND c.dibaca_admin = 0 THEN 1 ELSE 0 END) as unread_count")
+            ->groupBy('p.id_pelanggan', 'p.namalengkap_pelanggan', 'p.email_pelanggan', 'p.notelepon_pelanggan')
+            ->orderByRaw('CASE WHEN last_message_at IS NULL THEN 1 ELSE 0 END, last_message_at DESC')
+            ->get();
+
+        $items = $customers->map(function ($chat) {
+            $chatId = (int) ($chat->id_pelanggan ?? 0);
+            $name = (string) ($chat->namalengkap_pelanggan ?? 'Pelanggan');
+            $email = (string) ($chat->email_pelanggan ?? '');
+            $phone = (string) ($chat->notelepon_pelanggan ?? '');
+            $unread = (int) ($chat->unread_count ?? 0);
+            $lastAt = $chat->last_message_at ?? null;
+
+            $lastHuman = '';
+            if (!empty($lastAt)) {
+                try {
+                    $lastHuman = \Illuminate\Support\Carbon::parse($lastAt)->diffForHumans();
+                } catch (\Throwable $e) {
+                    $lastHuman = '';
+                }
+            }
+
+            $searchText = mb_strtolower(trim($name . ' ' . $email . ' ' . $phone));
+
+            return [
+                'id' => $chatId,
+                'name' => $name,
+                'email' => $email,
+                'phone' => $phone,
+                'unread' => $unread,
+                'last_human' => $lastHuman,
+                'last_message_at' => $lastAt,
+                'search_text' => $searchText,
+                'url' => url("/dashboard/chat/{$chatId}"),
+            ];
+        })->values();
+
+        return response()->json([
+            'ok' => true,
+            'data' => $items,
+        ]);
+    }
+
     public function listConversations(): View
     {
         $conn = DB::connection('sqlite');
@@ -183,5 +240,51 @@ class ChatAdminController extends Controller
         }
 
         return redirect("/dashboard/chat/{$selectedId}");
+    }
+
+    public function pollConversation(Request $request, $conversationId)
+    {
+        $selectedId = (int) $conversationId;
+        if ($selectedId <= 0) {
+            return response()->json(['ok' => false, 'message' => 'Customer not found'], 404);
+        }
+
+        $afterId = (int) $request->query('after_id', 0);
+        $conn = DB::connection('sqlite');
+
+        $query = $conn->table('Chat')
+            ->where('id_pelanggan', $selectedId)
+            ->orderBy('createdAt', 'asc');
+
+        if ($afterId > 0) {
+            $query->where('id_chat', '>', $afterId);
+        }
+
+        $rows = $query->get([
+            'id_chat',
+            'id_pelanggan',
+            'pengirim',
+            'pesan',
+            'dibaca_admin',
+            'createdAt',
+            'pengirim_user_id',
+            'pengirim_nama',
+            'attachment_path',
+            'attachment_mime',
+            'attachment_size',
+            'attachment_original_name',
+        ]);
+
+        $newIds = $rows->pluck('id_chat')->map(fn($v) => (int) $v)->filter()->values()->all();
+        if ($newIds !== []) {
+            $conn->table('Chat')
+                ->where('id_pelanggan', $selectedId)
+                ->whereIn('id_chat', $newIds)
+                ->where('pengirim', 'pelanggan')
+                ->where('dibaca_admin', 0)
+                ->update(['dibaca_admin' => 1]);
+        }
+
+        return response()->json(['ok' => true, 'data' => $rows]);
     }
 }

@@ -9,22 +9,31 @@ function json(status: number, data: unknown) {
   });
 }
 
-export const GET: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request }) => {
   try {
-    const url = new URL(request.url);
     const auth = request.headers.get("authorization") ?? request.headers.get("Authorization") ?? "";
     const pelangganId = request.headers.get("x-pelanggan-id") ?? request.headers.get("X-Pelanggan-Id") ?? "";
-    const idFromQuery = String(url.searchParams.get("id_pelanggan") ?? "").trim();
-    const idOut = String(pelangganId ?? "").trim() || idFromQuery;
-    const authOut = auth || (idOut ? `Bearer pelanggan:${idOut}` : "");
-    const pelangganIdOut = idOut;
-    const res = await fetch("http://localhost:8001/api/user", {
-      method: "GET",
+
+    const form = await request.formData().catch(() => null);
+    if (!form) return json(400, { ok: false, message: "Form-data tidak valid" });
+
+    const avatar = form.get("avatar");
+    if (!(avatar instanceof File) || avatar.size <= 0) {
+      return json(400, { ok: false, message: "File avatar tidak valid" });
+    }
+
+    const out = new FormData();
+    out.set("avatar", avatar, avatar.name);
+
+    const res = await fetch("http://localhost:8001/api/user/avatar", {
+      method: "POST",
       headers: {
-        ...(authOut ? { Authorization: authOut } : {}),
-        ...(pelangganIdOut ? { "X-Pelanggan-Id": pelangganIdOut } : {}),
+        ...(auth ? { Authorization: auth } : {}),
+        ...(pelangganId ? { "X-Pelanggan-Id": pelangganId } : {}),
       },
+      body: out,
     });
+
     const body = await res.text();
     return new Response(body, {
       status: res.status,

@@ -328,6 +328,8 @@ const productsByCategory: Record<string, ProductView[]> = Object.fromEntries(
 												<button
 													type="button"
 													class="inline-flex items-center justify-center rounded-md bg-slate-900 p-1.5 text-white shadow-sm hover:bg-slate-800"
+													data-cart-add
+													data-cart-id={p.id}
 													aria-label="Add to cart"
 												>
 													<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -430,6 +432,8 @@ const productsByCategory: Record<string, ProductView[]> = Object.fromEntries(
 																<button
 																	type="button"
 																	class="inline-flex items-center justify-center rounded-md bg-slate-900 p-1.5 text-white shadow-sm hover:bg-slate-800"
+																	data-cart-add
+																	data-cart-id={p.id}
 																	aria-label="Add to cart"
 																>
 																	<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -554,6 +558,56 @@ const productsByCategory: Record<string, ProductView[]> = Object.fromEntries(
 					}
 				};
 			};
+		</script>
+
+		<script is:inline data-astro-rerun>
+			(function () {
+				const KEY = 'cart_items';
+				const readItems = () => {
+					try {
+						const raw = window.localStorage.getItem(KEY);
+						if (!raw) return [];
+						const arr = JSON.parse(raw);
+						return Array.isArray(arr) ? arr : [];
+					} catch {
+						return [];
+					}
+				};
+				const writeItems = (items) => {
+					try {
+						window.localStorage.setItem(KEY, JSON.stringify(items));
+					} catch {}
+				};
+				const countItems = (items) => {
+					let sum = 0;
+					for (const it of items) {
+						const q = Number(it?.qty ?? 0);
+						if (Number.isFinite(q) && q > 0) sum += Math.trunc(q);
+					}
+					return sum;
+				};
+
+				document.addEventListener('click', (e) => {
+					const t = e.target instanceof Element ? e.target.closest('[data-cart-add]') : null;
+					if (!t) return;
+					e.preventDefault();
+					e.stopPropagation();
+					const id = Number(t.getAttribute('data-cart-id') || '0');
+					if (!Number.isInteger(id) || id <= 0) return;
+
+					const items = readItems();
+					const idx = items.findIndex((x) => Number(x?.id) === id);
+					if (idx >= 0) {
+						const prev = Number(items[idx]?.qty ?? 0);
+						items[idx] = { id, qty: Math.max(1, (Number.isFinite(prev) ? Math.trunc(prev) : 0) + 1) };
+					} else {
+						items.push({ id, qty: 1 });
+					}
+					writeItems(items);
+					const count = countItems(items);
+					window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count } }));
+				});
+			})();
 		</script>
 
 		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>

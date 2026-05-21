@@ -18,10 +18,105 @@ $activeMessages = ($activeChat['messages'] ?? null) ?? ($activeChat?->messages ?
 if (!($activeMessages instanceof \Illuminate\Support\Collection)) {
 $activeMessages = collect($activeMessages);
 }
+
+$activeCustomerName = 'Pelanggan';
+if (is_object($activeCustomer)) {
+$n1 = (string) ($activeCustomer->namalengkap_pelanggan ?? '');
+$n2 = (string) ($activeCustomer->name ?? '');
+if (trim($n1) !== '') $activeCustomerName = trim($n1);
+elseif (trim($n2) !== '') $activeCustomerName = trim($n2);
+} elseif (is_array($activeCustomer)) {
+$n1 = (string) ($activeCustomer['namalengkap_pelanggan'] ?? '');
+$n2 = (string) ($activeCustomer['name'] ?? '');
+if (trim($n1) !== '') $activeCustomerName = trim($n1);
+elseif (trim($n2) !== '') $activeCustomerName = trim($n2);
+}
+
+$lastMessageId = 0;
+try {
+$lastMessageId = (int) ($activeMessages->max('id_chat') ?? 0);
+} catch (\Throwable $e) {
+$lastMessageId = 0;
+}
+
+$chatsCollection = $chats instanceof \Illuminate\Support\Collection ? $chats : collect($chats);
+$sidebarItems = $chatsCollection->map(function ($chat) use ($activeChatId, $hasShowRoute) {
+$chatId = (int) ($chat->id_pelanggan ?? $chat->id ?? 0);
+$name = (string) ($chat->namalengkap_pelanggan ?? $chat->name ?? 'Pelanggan');
+$email = (string) ($chat->email_pelanggan ?? $chat->email ?? '');
+$phone = (string) ($chat->notelepon_pelanggan ?? $chat->phone ?? '');
+$unread = (int) ($chat->unread_count ?? $chat->unread ?? 0);
+$lastAt = $chat->last_message_at ?? $chat->lastMessageAt ?? null;
+$lastHuman = '';
+if (!empty($lastAt)) {
+try {
+$lastHuman = \Illuminate\Support\Carbon::parse($lastAt)->diffForHumans();
+} catch (\Throwable $e) {
+$lastHuman = '';
+}
+}
+$searchText = mb_strtolower(trim($name . ' ' . $email . ' ' . $phone));
+$chatUrl = $hasShowRoute ? route('dashboard.chat.show', $chatId) : url("/dashboard/chat/{$chatId}");
+
+return [
+'id' => $chatId,
+'name' => $name,
+'email' => $email,
+'phone' => $phone,
+'unread' => $unread,
+'last_human' => $lastHuman,
+'last_message_at' => $lastAt,
+'search_text' => $searchText,
+'url' => $chatUrl,
+'active' => $activeChatId > 0 && $chatId === (int) $activeChatId,
+];
+})->values()->all();
 @endphp
 
 <div class="px-4 py-4">
     <script>
+        window.cmsChatSidebar = function() {
+            return {
+                q: '',
+                activeId: @json($activeChatId),
+                items: @json($sidebarItems),
+                pollUrl: @json(url('/dashboard/chat/poll')),
+                timer: null,
+                running: false,
+                start() {
+                    if (this.running || !this.pollUrl) return;
+                    this.running = true;
+
+                    const poll = async () => {
+                        if (document.hidden) return;
+                        try {
+                            const res = await fetch(this.pollUrl, {
+                                headers: {
+                                    'Accept': 'application/json'
+                                }
+                            });
+                            const json = await res.json().catch(() => null);
+                            if (Array.isArray(json?.data)) this.items = json.data;
+                        } catch (e) {}
+                    };
+
+                    poll();
+                    this.timer = setInterval(poll, 3000);
+                    document.addEventListener('visibilitychange', () => {
+                        if (!document.hidden) poll();
+                    });
+                    window.addEventListener('beforeunload', () => this.stop());
+                },
+                stop() {
+                    if (this.timer) {
+                        clearInterval(this.timer);
+                        this.timer = null;
+                    }
+                    this.running = false;
+                },
+            };
+        };
+
         window.cmsChatRoom = function() {
             return {
                 searchOpen: false,
@@ -30,11 +125,121 @@ $activeMessages = collect($activeMessages);
                 searchHits: 0,
                 searchIndex: -1,
                 matchEls: [],
+                live: {
+                    activeId: @json($activeChatId),
+                    lastId: @json($lastMessageId),
+                    pollUrl: @json(url("/dashboard/chat/{$activeChatId}/poll")),
+                    timer: null,
+                    running: false,
+                },
                 scrollToBottom() {
                     this.$nextTick(() => {
                         const sc = this.$refs.messagesScroll;
                         if (sc) sc.scrollTop = sc.scrollHeight;
                     });
+                },
+                appendMessage(msg) {
+                    const wrap = this.$refs.messagesScroll?.querySelector('.space-y-3');
+                    if (!wrap) return;
+
+                    const isAdmin = String(msg?.pengirim || '') === 'admin';
+                    const senderLabel = isAdmin ? (String(msg?.pengirim_nama || 'Admin') || 'Admin') : @json($activeCustomerName);
+                    const time = msg?.createdAt ? String(msg.createdAt).slice(11, 16) : '';
+                    const pesan = String(msg?.pesan || '');
+
+                    const outer = document.createElement('div');
+                    outer.className = isAdmin ? 'flex justify-end' : 'flex justify-start';
+
+                    const bubble = document.createElement('div');
+                    bubble.className = (isAdmin ? 'bg-black text-white' : 'bg-gray-100 text-gray-900') + ' max-w-[36rem] rounded-2xl px-4 py-3';
+
+                    const sender = document.createElement('div');
+                    sender.className = 'mb-1 text-xs font-semibold opacity-80';
+                    sender.textContent = senderLabel;
+
+                    const body = document.createElement('div');
+                    body.className = 'whitespace-pre-line text-sm leading-relaxed';
+                    body.setAttribute('data-message', pesan);
+                    body.textContent = pesan;
+
+                    bubble.appendChild(sender);
+                    bubble.appendChild(body);
+
+                    const attachmentPath = String(msg?.attachment_path || '');
+                    const attachmentMime = String(msg?.attachment_mime || '');
+                    const attachmentName = String(msg?.attachment_original_name || 'Lampiran');
+                    if (attachmentPath) {
+                        const attachmentUrl = @json(asset('storage')) + '/' + attachmentPath.replace(/^\/+/, '');
+                        const isImage = attachmentMime ? attachmentMime.startsWith('image/') : false;
+
+                        const attachmentWrap = document.createElement('div');
+                        attachmentWrap.className = 'mt-3';
+                        if (isImage) {
+                            const a = document.createElement('a');
+                            a.href = attachmentUrl;
+                            a.target = '_blank';
+                            a.rel = 'noreferrer';
+                            a.className = 'block';
+                            const img = document.createElement('img');
+                            img.src = attachmentUrl;
+                            img.alt = attachmentName;
+                            img.className = 'max-h-64 w-full rounded-xl object-cover';
+                            a.appendChild(img);
+                            attachmentWrap.appendChild(a);
+                        } else {
+                            const a = document.createElement('a');
+                            a.href = attachmentUrl;
+                            a.target = '_blank';
+                            a.rel = 'noreferrer';
+                            a.className = (isAdmin ? 'text-white' : 'text-gray-900') + ' inline-flex items-center gap-2 rounded-xl border border-black/10 bg-white/60 px-3 py-2 text-sm font-semibold';
+                            a.textContent = attachmentName;
+                            attachmentWrap.appendChild(a);
+                        }
+                        bubble.appendChild(attachmentWrap);
+                    }
+
+                    if (time) {
+                        const t = document.createElement('div');
+                        t.className = 'mt-2 text-right text-[11px] opacity-75';
+                        t.textContent = time;
+                        bubble.appendChild(t);
+                    }
+
+                    outer.appendChild(bubble);
+                    wrap.appendChild(outer);
+                },
+                startLive() {
+                    if (!this.live.activeId || !this.live.pollUrl || this.live.running) return;
+                    this.live.running = true;
+                    const poll = async () => {
+                        try {
+                            const url = `${this.live.pollUrl}?after_id=${encodeURIComponent(String(this.live.lastId || 0))}`;
+                            const res = await fetch(url, {
+                                headers: {
+                                    'Accept': 'application/json'
+                                }
+                            });
+                            const json = await res.json().catch(() => null);
+                            const items = Array.isArray(json?.data) ? json.data : [];
+                            if (!items.length) return;
+                            for (const m of items) {
+                                const id = Number(m?.id_chat || 0);
+                                if (Number.isInteger(id) && id > (this.live.lastId || 0)) this.live.lastId = id;
+                                this.appendMessage(m);
+                            }
+                            this.scrollToBottom();
+                        } catch (e) {}
+                    };
+                    poll();
+                    this.live.timer = setInterval(poll, 2500);
+                    window.addEventListener('beforeunload', () => this.stopLive());
+                },
+                stopLive() {
+                    if (this.live.timer) {
+                        clearInterval(this.live.timer);
+                        this.live.timer = null;
+                    }
+                    this.live.running = false;
                 },
                 escapeRegExp(s) {
                     return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -140,12 +345,12 @@ $activeMessages = collect($activeMessages);
             };
         };
     </script>
-    <div class="grid h-[calc(100vh-4rem)] grid-cols-12 gap-3" x-data="{ q: '' }">
+    <div class="grid h-[calc(100vh-4rem)] grid-cols-12 gap-3" x-data="window.cmsChatSidebar()" x-init="start()">
         <section class="col-span-12 flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white lg:col-span-3">
             <div class="border-b border-gray-200 p-4">
                 <div class="flex items-center justify-between">
                     <div class="text-sm font-semibold text-gray-900">Pelanggan</div>
-                    <div class="text-xs text-gray-500">{{ method_exists($chats, 'count') ? $chats->count() : count($chats) }}</div>
+                    <div class="text-xs text-gray-500" x-text="items.length"></div>
                 </div>
                 <div class="mt-3">
                     <div class="relative">
@@ -167,49 +372,27 @@ $activeMessages = collect($activeMessages);
 
             <div class="min-h-0 flex-1 overflow-y-auto p-2">
                 <div class="space-y-1">
-                    @forelse ($chats as $chat)
-                    @php
-                    $chatId = (int) ($chat->id_pelanggan ?? $chat->id ?? 0);
-                    $name = (string) ($chat->namalengkap_pelanggan ?? $chat->name ?? 'Pelanggan');
-                    $email = (string) ($chat->email_pelanggan ?? $chat->email ?? '');
-                    $phone = (string) ($chat->notelepon_pelanggan ?? $chat->phone ?? '');
-                    $unread = (int) ($chat->unread_count ?? $chat->unread ?? 0);
-                    $isActive = $activeChatId > 0 && $chatId === $activeChatId;
-                    $lastAt = $chat->last_message_at ?? $chat->lastMessageAt ?? null;
-                    $lastHuman = '';
-                    if (!empty($lastAt)) {
-                    $lastHuman = \Illuminate\Support\Carbon::parse($lastAt)->diffForHumans();
-                    }
-                    $searchText = mb_strtolower(trim($name . ' ' . $email . ' ' . $phone));
-                    $chatUrl = $hasShowRoute ? route('dashboard.chat.show', $chatId) : url("/dashboard/chat/{$chatId}");
-                    @endphp
-
-                    <a
-                        href="{{ $chatUrl }}"
-                        class="{{ $isActive ? 'border-black bg-gray-50' : 'border-transparent hover:bg-gray-50' }} block rounded-xl border px-3 py-3 transition-colors"
-                        x-show="q.trim() === '' || '{{ e($searchText) }}'.includes(q.trim().toLowerCase())">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <div class="truncate text-sm font-semibold text-gray-900">{{ $name }}</div>
-                                <div class="truncate text-xs text-gray-500">{{ $email }}</div>
-                            </div>
-                            <div class="shrink-0 text-right">
-                                @if ($lastHuman !== '')
-                                <div class="text-[11px] font-medium text-gray-500">{{ $lastHuman }}</div>
-                                @endif
-                                @if ($unread > 0)
-                                <div class="mt-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-black px-2 text-[11px] font-semibold text-white">
-                                    {{ $unread }}
+                    <template x-for="item in items" :key="item.id">
+                        <a
+                            :href="item.url"
+                            class="block rounded-xl border px-3 py-3 transition-colors"
+                            :class="Number(item.id) === Number(activeId) ? 'border-black bg-gray-50' : 'border-transparent hover:bg-gray-50'"
+                            x-show="q.trim() === '' || String(item.search_text || '').includes(q.trim().toLowerCase())">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="truncate text-sm font-semibold text-gray-900" x-text="item.name"></div>
+                                    <div class="truncate text-xs text-gray-500" x-text="item.email"></div>
                                 </div>
-                                @endif
+                                <div class="shrink-0 text-right">
+                                    <div x-show="String(item.last_human || '') !== ''" class="text-[11px] font-medium text-gray-500" x-text="item.last_human"></div>
+                                    <div x-show="Number(item.unread || 0) > 0" class="mt-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-black px-2 text-[11px] font-semibold text-white" x-text="item.unread"></div>
+                                </div>
                             </div>
-                        </div>
-                    </a>
-                    @empty
-                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                        </a>
+                    </template>
+                    <div x-show="items.length === 0" class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
                         Belum ada pelanggan.
                     </div>
-                    @endforelse
                 </div>
             </div>
         </section>
@@ -217,7 +400,7 @@ $activeMessages = collect($activeMessages);
         <section
             class="col-span-12 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white lg:col-span-6"
             x-data="window.cmsChatRoom()"
-            x-init="scrollToBottom()">
+            x-init="scrollToBottom(); startLive()">
             <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
                 <div class="min-w-0">
                     <div class="truncate text-sm font-semibold text-gray-900">

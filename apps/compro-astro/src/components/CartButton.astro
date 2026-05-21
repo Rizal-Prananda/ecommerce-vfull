@@ -1,0 +1,144 @@
+---
+type Props = {
+	cartCount?: number;
+	href?: string;
+};
+
+const { cartCount = 0, href = '/keranjang' } = Astro.props as Props;
+const safeCount = Number.isFinite(cartCount) ? Math.max(0, Math.trunc(cartCount)) : 0;
+const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
+---
+
+<a
+	href={href}
+	aria-label="Lihat Keranjang"
+	data-cart-auth
+	class="relative hidden items-center justify-center rounded-xl p-2.5 text-gray-600 transition hover:bg-gray-50 hover:text-[#1A56DB] active:scale-95 lg:flex"
+>
+	<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<circle cx="9" cy="21" r="1" />
+		<circle cx="20" cy="21" r="1" />
+		<path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.65 16H19a2 2 0 0 0 2-1.65L23 6H6" />
+	</svg>
+	<span
+		data-cart-badge="desktop"
+		class={`absolute -right-1 -top-1 h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ${safeCount > 0 ? 'flex' : 'hidden'}`}
+	>
+		{safeCount > 0 ? formatCount(safeCount) : ''}
+	</span>
+</a>
+
+<div data-cart-auth class="fixed bottom-20 right-5 z-[9999] lg:hidden">
+	<a
+		href={href}
+		aria-label="Lihat Keranjang"
+		class="relative inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 transition hover:brightness-95 active:scale-95"
+	>
+		<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<circle cx="9" cy="21" r="1" />
+			<circle cx="20" cy="21" r="1" />
+			<path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.65 16H19a2 2 0 0 0 2-1.65L23 6H6" />
+		</svg>
+		<span
+			data-cart-badge="mobile"
+			class={`absolute -right-2 -top-2 h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold leading-none text-white ${safeCount > 0 ? 'flex' : 'hidden'}`}
+		>
+			{safeCount > 0 ? formatCount(safeCount) : ''}
+		</span>
+	</a>
+</div>
+
+<script is:inline data-astro-rerun>
+	(function () {
+		const KEY = 'cart_items';
+		const AUTH_KEYS = ['token_pelanggan', 'id_pelanggan', 'user'];
+		const authEls = Array.from(document.querySelectorAll('[data-cart-auth]'));
+		const badges = Array.from(document.querySelectorAll('[data-cart-badge]'));
+
+		const isLoggedIn = () => {
+			try {
+				const id = Number(window.localStorage.getItem('id_pelanggan') || '0');
+				const token = String(window.localStorage.getItem('token_pelanggan') || '').trim();
+				if (Number.isInteger(id) && id > 0) return true;
+				if (token.length > 0) return true;
+			} catch {}
+
+			try {
+				const raw = window.localStorage.getItem('user');
+				if (!raw) return false;
+				const obj = JSON.parse(raw);
+				return String(obj?.name || '').trim().length > 0;
+			} catch {
+				return false;
+			}
+		};
+
+		const applyAuthVisibility = () => {
+			const ok = isLoggedIn();
+			for (const el of authEls) {
+				if (!(el instanceof HTMLElement)) continue;
+				el.style.display = ok ? '' : 'none';
+			}
+			return ok;
+		};
+
+		const readItems = () => {
+			try {
+				const raw = window.localStorage.getItem(KEY);
+				if (!raw) return [];
+				const arr = JSON.parse(raw);
+				return Array.isArray(arr) ? arr : [];
+			} catch {
+				return [];
+			}
+		};
+
+		const computeCount = () => {
+			const items = readItems();
+			let sum = 0;
+			for (const it of items) {
+				const q = Number(it?.qty ?? 0);
+				if (Number.isFinite(q) && q > 0) sum += Math.trunc(q);
+			}
+			return sum;
+		};
+
+		const formatCount = (n) => (n > 99 ? '99+' : String(n));
+
+		const apply = (count) => {
+			for (const el of badges) {
+				if (!(el instanceof HTMLElement)) continue;
+				if (count > 0) {
+					el.textContent = formatCount(count);
+					el.classList.remove('hidden');
+					el.classList.add('flex');
+				} else {
+					el.textContent = '';
+					el.classList.add('hidden');
+					el.classList.remove('flex');
+				}
+			}
+		};
+
+		const ok = applyAuthVisibility();
+		if (ok) apply(computeCount());
+
+		window.addEventListener('cart:updated', (e) => {
+			if (!applyAuthVisibility()) return;
+			const c = Number(e?.detail?.count ?? NaN);
+			if (Number.isFinite(c)) apply(Math.max(0, Math.trunc(c)));
+			else apply(computeCount());
+		});
+
+		window.addEventListener('storage', (e) => {
+			if (e.key && AUTH_KEYS.includes(e.key)) {
+				const ok = applyAuthVisibility();
+				if (ok) apply(computeCount());
+				return;
+			}
+			if (e.key !== KEY) return;
+			if (!applyAuthVisibility()) return;
+			apply(computeCount());
+		});
+	})();
+</script>

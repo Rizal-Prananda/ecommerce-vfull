@@ -11,20 +11,17 @@ function json(status: number, data: unknown) {
 
 export const GET: APIRoute = async ({ request }) => {
   try {
-    const url = new URL(request.url);
     const auth = request.headers.get("authorization") ?? request.headers.get("Authorization") ?? "";
     const pelangganId = request.headers.get("x-pelanggan-id") ?? request.headers.get("X-Pelanggan-Id") ?? "";
-    const idFromQuery = String(url.searchParams.get("id_pelanggan") ?? "").trim();
-    const idOut = String(pelangganId ?? "").trim() || idFromQuery;
-    const authOut = auth || (idOut ? `Bearer pelanggan:${idOut}` : "");
-    const pelangganIdOut = idOut;
-    const res = await fetch("http://localhost:8001/api/user", {
+
+    const res = await fetch("http://localhost:8001/api/orders", {
       method: "GET",
       headers: {
-        ...(authOut ? { Authorization: authOut } : {}),
-        ...(pelangganIdOut ? { "X-Pelanggan-Id": pelangganIdOut } : {}),
+        ...(auth ? { Authorization: auth } : {}),
+        ...(pelangganId ? { "X-Pelanggan-Id": pelangganId } : {}),
       },
     });
+
     const body = await res.text();
     return new Response(body, {
       status: res.status,

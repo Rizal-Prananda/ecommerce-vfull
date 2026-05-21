@@ -9,24 +9,26 @@ function json(status: number, data: unknown) {
   });
 }
 
-export const GET: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request }) => {
   try {
-    const url = new URL(request.url);
     const auth = request.headers.get("authorization") ?? request.headers.get("Authorization") ?? "";
     const pelangganId = request.headers.get("x-pelanggan-id") ?? request.headers.get("X-Pelanggan-Id") ?? "";
-    const idFromQuery = String(url.searchParams.get("id_pelanggan") ?? "").trim();
-    const idOut = String(pelangganId ?? "").trim() || idFromQuery;
-    const authOut = auth || (idOut ? `Bearer pelanggan:${idOut}` : "");
-    const pelangganIdOut = idOut;
-    const res = await fetch("http://localhost:8001/api/user", {
-      method: "GET",
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") return json(400, { ok: false, message: "Body tidak valid" });
+
+    const res = await fetch("http://localhost:8001/api/user/update", {
+      method: "POST",
       headers: {
-        ...(authOut ? { Authorization: authOut } : {}),
-        ...(pelangganIdOut ? { "X-Pelanggan-Id": pelangganIdOut } : {}),
+        "Content-Type": "application/json",
+        ...(auth ? { Authorization: auth } : {}),
+        ...(pelangganId ? { "X-Pelanggan-Id": pelangganId } : {}),
       },
+      body: JSON.stringify(body),
     });
-    const body = await res.text();
-    return new Response(body, {
+
+    const raw = await res.text();
+    return new Response(raw, {
       status: res.status,
       headers: { "Content-Type": "application/json" },
     });
