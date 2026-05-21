@@ -134,7 +134,7 @@
                     </a>
                     <button
                         type="submit"
-                        class="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                        class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-300 px-4 text-sm font-semibold text-slate-900 shadow-m hover:bg-slate-400"
                     >
                         Simpan
                     </button>

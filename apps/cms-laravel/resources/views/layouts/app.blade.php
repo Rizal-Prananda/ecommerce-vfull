@@ -19,21 +19,32 @@
 <body class="h-screen bg-slate-50 text-slate-900 antialiased">
     <style>
         [x-cloak] {
-            display: none !important;
+        display: none !important;
         }
 
         #cms-admin {
-            --cms-bg: linear-gradient(135deg, #08163D, #0E1F4F, #10245C) !important;
-            --cms-bg-hover: rgba(255, 255, 255, 0.05);
+            --cms-bg: linear-gradient(180deg, #2f4156 0%, #243447 100%) !important;
+            --cms-bg-hover: rgba(200, 217, 230, 0.12);
             --cms-border: rgba(255, 255, 255, 0.08);
-            --cms-text: #ffffff;
+            --cms-text: #f5efeb;
             --cms-text-active: #ffffff;
-            --cms-primary: #2275fc;
+            --cms-primary: #567c8d;
+
+            --cms-card: #ffffff;
+            --cms-soft: #f5efeb;
+            --cms-soft-blue: #c8d9e6;
+            --cms-accent: #567c8d;
+            --cms-title: #2f4156;
+        }
+
+        body {
+            background: #f5efeb !important;
+            color: #2f4156 !important;
         }
 
         #cms-admin .cms-sidebar {
             background: var(--cms-bg) !important;
-            border-right: 1px solid var(--cms-border) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
         }
 
         #cms-admin .cms-sidebar-header {
@@ -46,22 +57,118 @@
         }
 
         #cms-admin .cms-menu-item:hover {
-            background: rgb(44, 149, 247) !important;
+            background: rgba(86, 124, 141, 0.35) !important;
             color: var(--cms-text-active) !important;
         }
 
         #cms-admin .cms-menu-active {
-            background: rgba(40, 122, 255, 0.12) !important;
-            color: #4393f5 !important;
-            border-left: 2px solid var(--cms-primary) !important;
-            box-shadow: none !important;
+            background: linear-gradient(90deg, rgba(200, 217, 230, 0.18), rgba(86, 124, 141, 0.22)) !important;
+            color: #ffffff !important;
+            border-left: 3px solid #c8d9e6 !important;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03) !important;
+        }
+
+        /* HEADER */
+        header {
+            background: #2f4156 !important;
+            border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+        }
+
+        /* MAIN */
+        main {
+            background: #f5efeb !important;
+        }
+
+        /* CARD */
+        .rounded-lg.border,
+        .rounded-lg.border.border-gray-200,
+        .overflow-hidden.rounded-lg {
+            background: #ffffff !important;
+            border-color: rgba(47, 65, 86, 0.08) !important;
+            box-shadow:
+            0 4px 14px rgba(47, 65, 86, 0.05),
+            0 1px 2px rgba(47, 65, 86, 0.04) !important;
+        }
+
+        /* TITLE */
+        h1,
+        .text-gray-900,
+        .font-semibold,
+        .font-bold {
+            color: #2f4156 !important;
+        }
+
+        /* SUBTITLE */
+        .text-gray-500,
+        .text-gray-600,
+        .text-gray-700 {
+            color: #567c8d !important;
+        }
+
+        /* TABLE HEADER */
+        thead {
+          background: #f5efeb !important;
+        }
+
+        thead th {
+         color: #567c8d !important;
+        }
+
+        tbody tr:hover {
+         background: rgba(200, 217, 230, 0.18) !important;
+        }
+
+        /* ICON BOX */
+        .bg-blue-50 {
+         background: rgba(200, 217, 230, 0.35) !important;
+        }
+
+        .text-blue-600 {
+         color: #567c8d !important;
+        }
+
+        /* BUTTON PRIMARY */
+        .bg-slate-900 {
+          background: #567c8d !important;
+        }
+
+        .bg-slate-900:hover {
+         background: #2f4156 !important;
+        }
+
+        /* BUTTON OUTLINE */
+        a.inline-flex,
+        button.inline-flex {
+            transition: all .2s ease;
+        }
+
+        a.inline-flex:hover {
+            background: #c8d9e6 !important;
+            border-color: #567c8d !important;
+            color: #2f4156 !important;
+        }
+
+        /* PROFILE BUTTON */
+        .rounded-full.bg-white {
+            background: #ffffff !important;
+        }
+
+        /* ENDPOINT BOX */
+        .bg-gray-50 {
+         background: #f5efeb !important;
+        }
+
+        /* INPUT / ACTION CARD */
+        .shadow-sm {
+            box-shadow:
+            0 2px 10px rgba(47, 65, 86, 0.05) !important;
         }
     </style>
 
     <div id="cms-admin" class="h-screen flex" x-data="{ sidebarOpen: true }">
         <aside
             class="cms-sidebar sticky top-0 z-40 hidden h-screen flex-col relative transition-all duration-300 ease-out md:flex"
-            :class="sidebarOpen ? 'w-64' : 'w-20'">
+            :class="sidebarOpen ? 'w-[300px]' : 'w-[120px]'">
             <button type="button" @click="sidebarOpen = !sidebarOpen"
                 class="absolute -right-3 top-6 grid h-6 w-6 place-items-center rounded-full border border-gray-200 bg-white text-slate-900 shadow-sm"
                 aria-label="Toggle sidebar">
