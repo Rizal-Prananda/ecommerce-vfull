@@ -501,7 +501,6 @@
                         <button
                             type="button"
                             @click="addOpen = true"
-                            class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
                             class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-300 px-4 text-sm font-semibold text-slate-900 shadow-m hover:bg-slate-400"
                         >
                             Add User
@@ -952,23 +951,14 @@
                                 class="inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100">
                                 Cancel
                             </button>
-                            <button type="submit"
-                                class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                                <button type="submit"
+                                class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-300 px-4 text-sm font-semibold text-slate-900 shadow-m hover:bg-slate-400">
                                 Add User
                             </button>
                         </div>
                     </form>
                 </div>
-                    <div class="mt-6 flex items-center justify-end gap-2">
-                        <button type="button" @click="addOpen = false"
-                            class="inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-                            Cancel
-                        </button>
-                        <button type="submit"
-                            class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-300 px-4 text-sm font-semibold text-slate-900 shadow-m hover:bg-slate-400">
-                            Add User
-                        </button>
-                    </div>
+                   
                 </form>
             </div>
         </div>
