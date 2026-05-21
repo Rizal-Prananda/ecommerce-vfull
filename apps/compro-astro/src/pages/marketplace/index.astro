@@ -1,4 +1,4 @@
----
+﻿---
 import Layout from '../../layouts/Layout.astro';
 
 type Product = {
@@ -13,11 +13,12 @@ type Product = {
 
 type ProductView = Product & {
 	category: string;
-	spiceLevel: number;
 	sold: number;
 	imageUrl: string;
 	ratingValue: number;
 	isMock: boolean;
+	size: string;
+	color: string;
 };
 
 const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001';
@@ -49,21 +50,15 @@ function formatRupiah(v: number) {
 	return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
 }
 
-const categories = ['Seblak', 'Mie', 'Bakso', 'Cemilan', 'Minuman'];
+const categories = ['T-Shirts', 'Shirts', 'Hoodies', 'Pants', 'Jackets', 'Shoes', 'Accessories'];
+const sizes = ['S', 'M', 'L', 'XL'];
+const colors = ['Black', 'White', 'Grey', 'Ivory'];
 
 function pickCategory(p: Product) {
 	if (typeof p.categoryId === 'number' && Number.isFinite(p.categoryId)) {
-		return categories[Math.abs(p.categoryId) % categories.length] ?? 'Seblak';
+		return categories[Math.abs(p.categoryId) % categories.length] ?? 'T-Shirts';
 	}
-	return categories[p.id % categories.length] ?? 'Seblak';
-}
-
-function spiceLevelFrom(p: Product) {
-	return p.id % 11;
-}
-
-function soldFrom(p: Product) {
-	return 20 + ((p.id * 37) % 800);
+	return categories[p.id % categories.length] ?? 'T-Shirts';
 }
 
 function ratingFrom(p: Product) {
@@ -71,139 +66,186 @@ function ratingFrom(p: Product) {
 	return Math.max(0, Math.min(5, v));
 }
 
-const productsView: ProductView[] = products.map((p) => {
-	const spiceLevel = spiceLevelFrom(p);
+const productsView: ProductView[] = products.map((p, idx) => {
 	const category = pickCategory(p);
 	const ratingValue = ratingFrom(p);
-	const seed = encodeURIComponent(String(p.id));
+	const size = sizes[p.id % sizes.length];
+	const color = colors[p.id % colors.length];
+	const photoNum = (idx % 6) + 1;
 
 	return {
 		...p,
-		spiceLevel,
 		category,
-		sold: soldFrom(p),
+		sold: 20 + ((p.id * 37) % 800),
 		ratingValue,
-		imageUrl: p.image ?? `https://picsum.photos/seed/seblak-${seed}/600/450`,
+		imageUrl: p.image ?? `/marketplace/baju ${photoNum}.webp`,
 		isMock: false,
+		size,
+		color,
 	};
 });
 
 function makeMockProduct(index: number): ProductView {
 	const id = 100000 + index;
 	const titlePool = [
-		'Seblak Ceker Super Pedas',
-		'Seblak Komplit Baso + Sosis',
-		'Seblak Kerupuk Bandung',
-		'Mie Seblak Level Neraka',
-		'Seblak Tulang Extra',
-		'Bakso Aci Kuah Pedas',
-		'Cireng Bumbu Rujak',
-		'Es Teh Lemon Segar',
-		'Seblak Keju Mozzarella',
-		'Seblak Seafood Mix',
+		'Slim Fit T-Shirt',
+		'Structured Linen Shirt',
+		'Signature Hoodie',
+		'Tailored Wide Pants',
+		'Monochrome Bomber Jacket',
+		'Suede Sneaker',
+		'Metallic Strap Watch',
+		'Classic Leather Belt',
+		'Relaxed Sweatshirt',
+		'Minimalist Slip-On',
 	];
-	const title = titlePool[index % titlePool.length] ?? `Produk ${id}`;
-	const category = categories[index % categories.length] ?? 'Seblak';
-	const spiceLevel = index % 11;
-	const price = 8000 + ((index * 1750) % 32000);
+	const title = titlePool[index % titlePool.length] ?? `Product ${id}`;
+	const category = categories[index % categories.length] ?? 'T-Shirts';
+	const price = 15000 + ((index * 2300) % 45000);
 	const ratingValue = Number(((3.8 + ((index % 12) / 20)) % 5).toFixed(1));
-	const sold = 50 + ((index * 29) % 1200);
-	const seed = encodeURIComponent(String(id));
+	const size = sizes[index % sizes.length];
+	const color = colors[index % colors.length];
+	const photoNum = (index % 6) + 1;
 
 	return {
 		id,
 		title,
 		price,
 		category,
-		spiceLevel,
-		sold,
+		sold: 50 + ((index * 29) % 1200),
 		ratingValue,
-		imageUrl: `https://picsum.photos/seed/seblak-mock-${seed}/600/450`,
+		imageUrl: `/marketplace/baju ${photoNum}.webp`,
 		isMock: true,
+		size,
+		color,
 	};
 }
 
-const desiredGridCount = 15;
+const desiredGridCount = 6;
 const productsForGrid: ProductView[] = [...productsView];
 for (let i = 0; productsForGrid.length < desiredGridCount; i += 1) {
 	productsForGrid.push(makeMockProduct(i));
 }
 
-const recommended = productsForGrid.slice(0, 10);
-
-const desiredCatalogCount = 30;
-const productsForCatalog: ProductView[] = [...productsForGrid];
-for (let i = 0; productsForCatalog.length < desiredCatalogCount; i += 1) {
-	productsForCatalog.push(makeMockProduct(100 + i));
-}
-
-const productsByCategory: Record<string, ProductView[]> = Object.fromEntries(
-	categories.map((c) => [c, productsForCatalog.filter((p) => p.category === c)])
-);
+const featuredCollections = [
+	{ title: 'New Arrivals', subtitle: 'Fresh luxury', image: '/images/collection-new-arrivals.jpg' },
+	{ title: 'Best Seller', subtitle: 'Top picks', image: '/images/collection-best-seller.jpg' },
+	{ title: "Men's Edit", subtitle: 'Sharp cuts', image: '/images/collection-mens.jpg' },
+	{ title: "Women's Edit", subtitle: 'Refined essentials', image: '/images/collection-womens.jpg' },
+];
 ---
 
-<Layout title="Marketplace">
+<Layout title="Marketplace Fashion">
 	<style>
 		.no-scrollbar::-webkit-scrollbar { display: none; }
 		.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+		[x-cloak] { display: none !important; }
 	</style>
 
 	<main class="bg-slate-50">
-		<div class="mx-auto w-full max-w-6xl px-4 pt-10 pb-16">
-			<div class="flex flex-col gap-6">
-				<div class="flex flex-col gap-2">
-					<h1 class="text-3xl font-semibold tracking-tight text-slate-900">Marketplace Seblak</h1>
-					<p class="text-sm text-slate-600">Jajanan pedas, seblak, dan makanan favorit kamu.</p>
-				</div>
-
-				<div
-					x-data="marketplaceFilterBar({ initialSearch: $el.getAttribute('data-initial-search') || '' })"
-					x-init="init()"
-					data-initial-search={q}
-					class="sticky top-[72px] z-20 -mx-4 border-y border-slate-200 bg-white/85 px-4 py-4 backdrop-blur-md"
-				>
-					<div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-						<div class="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-							<div class="relative w-full sm:flex-1">
-								<svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M21 21l-4.3-4.3" />
-									<circle cx="11" cy="11" r="7" />
-								</svg>
-								<input
-									x-ref="search"
-									x-model="search"
-									@input.debounce.150ms="apply()"
-									placeholder="Cari seblak, topping, minuman..."
-									class="h-11 w-full rounded-lg border-0 bg-slate-100 px-10 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900/10"
-								/>
+		<div class="mx-auto w-full max-w-7xl px-4 pt-10 pb-16">
+			<div class="space-y-10" x-data="fashionMarketplace({ initialSearch: q })" x-init="init()">
+				<section class="overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-900 to-slate-700 p-8 shadow-2xl">
+					<div class="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+						<div class="flex flex-col justify-center gap-6 text-white">
+							<div class="space-y-3">
+								<p class="text-sm uppercase tracking-[0.28em] text-white/70">Exclusive Drop This Week</p>
+								<h1 class="max-w-3xl text-5xl font-bold tracking-tight text-white">Timeless Fashion For All</h1>
+								<p class="max-w-xl text-sm leading-7 text-white/80">Minimalist. Unisex. Premium cotton & sustainable materials.</p>
 							</div>
 
-							<div class="flex items-center gap-2">
+							<div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+								<div class="overflow-hidden rounded-full border border-white/10 bg-white/10">
+									<select class="h-12 rounded-full bg-transparent px-6 text-sm font-semibold text-white outline-none transition focus:border-white/20 focus:ring-2 focus:ring-white/10">
+										<option selected>All Category</option>
+										<option>Men</option>
+										<option>Women</option>
+										<option>Unisex</option>
+									</select>
+								</div>
+								<button class="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-semibold text-slate-900 shadow-lg shadow-slate-950/10 transition hover:scale-[1.01]">Shop Now</button>
+							</div>
+						</div>
+
+						<div class="relative flex items-center justify-center overflow-hidden rounded-[1.75rem] bg-white/5 p-6 before:absolute before:-left-16 before:top-0 before:h-72 before:w-72 before:-translate-y-16 before:rounded-full before:bg-white/10">
+						<img src="/images/hero-model.jpg" alt="Model fashion black and white" class="relative h-[420px] w-full max-w-[38rem] rounded-[1.75rem] object-cover shadow-2xl" />
+						</div>
+					</div>
+
+					<div class="mt-10 flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-white/5 px-5 py-4 text-sm text-white/70 sm:flex-row sm:items-center sm:justify-between">
+						<div class="flex items-center gap-3">
+							<div class="flex -space-x-2">
+						<img src="/images/avatar-1.jpg" alt="Avatar 1" class="h-12 w-12 rounded-full border border-white/20 object-cover" />
+						<img src="/images/avatar-2.jpg" alt="Avatar 2" class="h-12 w-12 rounded-full border border-white/20 object-cover" />
+						<img src="/images/avatar-3.jpg" alt="Avatar 3" class="h-12 w-12 rounded-full border border-white/20 object-cover" />
+							</div>
+							<div class="space-y-1">
+								<div class="text-sm font-semibold text-white">⭐ 4.8 (8.2K Reviews)</div>
+								<div class="text-xs text-white/60">A curated audience of luxury fashion lovers.</div>
+							</div>
+						</div>
+						<button class="inline-flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15">Sign Up Now</button>
+					</div>
+				</section>
+
+				<section class="mt-10">
+					<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div>
+							<h2 class="text-lg font-semibold tracking-tight text-slate-900">Featured Collections</h2>
+							<p class="mt-1 text-sm text-slate-600">Koleksi curated untuk penampilan monokrom premium.</p>
+						</div>
+					</div>
+
+					<div class="mt-5 flex gap-3 overflow-x-auto no-scrollbar pb-1">
+						{featuredCollections.map((collection) => (
+							<div class="min-w-[16rem] shrink-0 rounded-full border border-slate-200 bg-slate-50 p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+								<div class="flex items-center gap-3">
+									<div class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">{collection.title.charAt(0)}</div>
+									<div>
+										<div class="text-sm font-semibold text-slate-900">{collection.title}</div>
+										<p class="mt-1 text-xs text-slate-500">{collection.subtitle}</p>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				</section>
+
+				<section class="mt-10 rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur-md">
+					<div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+						<div class="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+							<div class="relative flex-1">
+								<input
+									x-model="search"
+									@input.debounce.150ms="apply()"
+									placeholder="Cari produk premium..."
+									class="h-12 w-full rounded-xl border-0 bg-slate-100 px-4 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-slate-900/10"
+								/>
+							</div>
+							<div class="flex flex-wrap items-center gap-2">
 								<button
 									type="button"
-									@click="togglePill('pedas')"
-									class="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold shadow-sm transition"
-									:class="pedas ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+									@click="togglePill('new')"
+									class="inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition"
+									:class="activeFilters.new ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'"
 								>
-									<span aria-hidden="true">🔥</span>
-									Pedas
+									New
 								</button>
 								<button
 									type="button"
-									@click="togglePill('promo')"
-									class="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold shadow-sm transition"
-									:class="promo ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+									@click="togglePill('sale')"
+									class="inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition"
+									:class="activeFilters.sale ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'"
 								>
-									% Promo
+									Sale
 								</button>
 								<button
 									type="button"
 									@click="togglePill('rating')"
-									class="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold shadow-sm transition"
-									:class="rating45 ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+									class="inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition"
+									:class="activeFilters.rating ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'"
 								>
-									<span aria-hidden="true">⭐</span>
-									4.5+
+									⭐ 4.5+
 								</button>
 							</div>
 						</div>
@@ -212,8 +254,7 @@ const productsByCategory: Record<string, ProductView[]> = Object.fromEntries(
 							<button
 								type="button"
 								@click="open = !open"
-								class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-100 px-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-200"
-								:aria-expanded="open"
+								class="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
 							>
 								Filter
 								<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -221,317 +262,172 @@ const productsByCategory: Record<string, ProductView[]> = Object.fromEntries(
 								</svg>
 							</button>
 
-							<div
-								x-show="open"
-								x-cloak
-								@click.outside="open = false"
-								class="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-lg"
-							>
-								<div class="grid gap-3">
+							<div x-show="open" x-cloak @click.outside="open = false" class="absolute right-0 z-30 mt-3 w-72 rounded-3xl border border-slate-200 bg-white p-4 shadow-lg">
+								<div class="grid gap-4">
 									<div>
-										<label class="text-xs font-semibold text-slate-700">Kategori</label>
-										<select
-											x-model="category"
-											@change="apply()"
-											class="mt-1.5 h-10 w-full rounded-lg border-0 bg-slate-100 px-3 text-sm text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-slate-900/10"
-										>
-											<option value="">Semua</option>
-											{categories.map((c) => (
-												<option value={c}>{c}</option>
-											))}
+										<label class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Size</label>
+										<select x-model="size" @change="apply()" class="mt-2 h-11 w-full rounded-2xl border-0 bg-slate-100 px-3 text-sm text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-slate-900/10">
+											<option value="">All sizes</option>
+											<option value="S">S</option>
+											<option value="M">M</option>
+											<option value="L">L</option>
+											<option value="XL">XL</option>
 										</select>
 									</div>
-
 									<div>
-										<label class="text-xs font-semibold text-slate-700">Harga</label>
-										<select
-											x-model="priceRange"
-											@change="apply()"
-											class="mt-1.5 h-10 w-full rounded-lg border-0 bg-slate-100 px-3 text-sm text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-slate-900/10"
-										>
-											<option value="">Semua</option>
-											<option value="0-10000">&lt; Rp 10rb</option>
-											<option value="10000-20000">Rp 10rb - 20rb</option>
-											<option value="20000-35000">Rp 20rb - 35rb</option>
-											<option value="35000-999999">&gt; Rp 35rb</option>
+										<label class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Color</label>
+										<select x-model="color" @change="apply()" class="mt-2 h-11 w-full rounded-2xl border-0 bg-slate-100 px-3 text-sm text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-slate-900/10">
+											<option value="">All colors</option>
+											<option value="Black">Black</option>
+											<option value="White">White</option>
+											<option value="Grey">Grey</option>
+											<option value="Ivory">Ivory</option>
+										</select>
+									</div>
+									<div>
+										<label class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Price</label>
+										<select x-model="price" @change="apply()" class="mt-2 h-11 w-full rounded-2xl border-0 bg-slate-100 px-3 text-sm text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-slate-900/10">
+											<option value="">All prices</option>
+											<option value="0-15000">Rp 0 - 15rb</option>
+											<option value="15000-25000">Rp 15rb - 25rb</option>
+											<option value="25000-999999">Rp 25rb+</option>
 										</select>
 									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
+				</section>
 
-				{productsView.length ? (
-					<>
-						<section class="mt-2">
-							<div class="mb-3 flex items-center justify-between gap-3">
-								<div>
-									<div class="text-lg font-semibold text-slate-900">Rekomendasi</div>
-									<div class="mt-0.5 text-sm text-slate-600">Pilihan terbaik untuk kamu hari ini.</div>
-								</div>
-								<div class="flex items-center gap-2">
-									<button
-										type="button"
-										class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-										onclick="scrollSlider('rekomendasi-slider', -1)"
-										aria-label="Scroll left"
-									>
-										<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M15 18l-6-6 6-6" />
-										</svg>
-									</button>
-									<button
-										type="button"
-										class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-										onclick="scrollSlider('rekomendasi-slider', 1)"
-										aria-label="Scroll right"
-									>
-										<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M9 18l6-6-6-6" />
-										</svg>
-									</button>
-								</div>
-							</div>
-
-							<div id="rekomendasi-slider" class="no-scrollbar flex gap-3 overflow-x-auto pb-1">
-								{recommended.map((p) => (
-									<a
-										href={p.isMock ? '#' : `/marketplace/${p.id}-${slugify(p.title)}`}
-										class={`group w-52 shrink-0 rounded-xl border border-slate-200/80 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${p.isMock ? 'cursor-default' : ''}`}
-									>
-										<div class="relative h-32 overflow-hidden rounded-t-xl bg-slate-100">
-											<img
-												src={p.imageUrl}
-												alt={p.title}
-												loading="lazy"
-												class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-											/>
-											<div class="absolute left-2 top-2 inline-flex items-center rounded-md bg-red-500/90 px-2 py-1 text-[10px] font-bold text-white">
-												Level {p.spiceLevel}
-											</div>
-										</div>
-										<div class="p-2.5">
-											<div class="h-4 line-clamp-1 text-xs font-semibold text-slate-900">{p.title}</div>
-											<div class="mt-1 flex items-center justify-between text-[11px] text-slate-500">
-												<div class="inline-flex items-center gap-1">
-													<svg class="h-2.5 w-2.5 text-amber-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-														<path d="M12 17.27 18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27Z" />
-													</svg>
-													<span class="font-semibold text-slate-700">{p.ratingValue ? p.ratingValue.toFixed(1) : '—'}</span>
-													<span class="text-slate-300">•</span>
-													<span>{p.sold} terjual</span>
-												</div>
-											</div>
-											<div class="mt-2 flex items-center justify-between gap-2">
-												<div class="text-sm font-bold text-slate-900">{formatRupiah(p.price)}</div>
-												<button
-													type="button"
-													class="inline-flex items-center justify-center rounded-md bg-slate-900 p-1.5 text-white shadow-sm hover:bg-slate-800"
-													data-cart-add
-													data-cart-id={p.id}
-													aria-label="Add to cart"
-												>
-													<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-														<path d="M12 5v14" />
-														<path d="M5 12h14" />
-													</svg>
-												</button>
-											</div>
-										</div>
-									</a>
-								))}
-							</div>
-						</section>
-
-						<section class="mt-8">
-							<div class="mb-3 flex items-center justify-between gap-3">
-								<div>
-									<div class="text-lg font-semibold text-slate-900">Produk per Kategori</div>
-									<div class="mt-0.5 text-sm text-slate-600">
-										<span id="products-count">{productsForCatalog.length}</span> produk ditampilkan
-									</div>
-								</div>
-							</div>
-
-							<div id="catalog" class="space-y-8">
-								{categories.map((cat) => {
-									const list = productsByCategory[cat] ?? [];
-									const sliderId = `cat-slider-${cat.toLowerCase()}`;
-
-									return (
-										<section class="category-section" data-category={cat}>
-											<div class="mb-3 flex items-center justify-between gap-3">
-												<div class="min-w-0">
-													<div class="text-base font-semibold text-slate-900">{cat}</div>
-													<div class="mt-0.5 text-xs text-slate-600">
-														<span class="category-count" data-category-count={cat}>{list.length}</span> item
-													</div>
-												</div>
-												<div class="flex items-center gap-2">
-													<button
-														type="button"
-														class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-														onclick={`scrollSlider('${sliderId}', -1)`}
-														aria-label={`Scroll left ${cat}`}
-													>
-														<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-															<path d="M15 18l-6-6 6-6" />
-														</svg>
-													</button>
-													<button
-														type="button"
-														class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-														onclick={`scrollSlider('${sliderId}', 1)`}
-														aria-label={`Scroll right ${cat}`}
-													>
-														<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-															<path d="M9 18l6-6-6-6" />
-														</svg>
-													</button>
-												</div>
-											</div>
-
-											<div id={sliderId} class="no-scrollbar flex gap-3 overflow-x-auto pb-1">
-												{list.map((p) => (
-													<a
-														href={p.isMock ? '#' : `/marketplace/${p.id}-${slugify(p.title)}`}
-														class={`product-card group w-52 shrink-0 rounded-xl border border-slate-200/80 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${p.isMock ? 'cursor-default' : ''}`}
-														data-title={p.title.toLowerCase()}
-														data-category={p.category}
-														data-level={String(p.spiceLevel)}
-														data-promo={String(p.id % 4 === 0)}
-														data-price={String(p.price)}
-														data-rating={String(p.ratingValue)}
-													>
-														<div class="relative h-28 overflow-hidden rounded-t-xl bg-slate-100">
-															<img
-																src={p.imageUrl}
-																alt={p.title}
-																loading="lazy"
-																class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-															/>
-															<div class="absolute left-2 top-2 inline-flex items-center rounded-md bg-red-500/90 px-2 py-1 text-[10px] font-bold text-white">
-																Level {p.spiceLevel}
-															</div>
-														</div>
-														<div class="p-2.5">
-															<div class="h-4 line-clamp-1 text-xs font-semibold text-slate-900">{p.title}</div>
-															<div class="mt-1 flex items-center justify-between text-[11px] text-slate-500">
-																<div class="inline-flex items-center gap-1">
-																	<svg class="h-2.5 w-2.5 text-amber-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-																		<path d="M12 17.27 18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27Z" />
-																	</svg>
-																	<span class="font-semibold text-slate-700">{p.ratingValue ? p.ratingValue.toFixed(1) : '—'}</span>
-																	<span class="text-slate-300">•</span>
-																	<span>{p.sold} terjual</span>
-																</div>
-															</div>
-															<div class="mt-2 flex items-center justify-between gap-2">
-																<div class="text-sm font-bold text-slate-900">{formatRupiah(p.price)}</div>
-																<button
-																	type="button"
-																	class="inline-flex items-center justify-center rounded-md bg-slate-900 p-1.5 text-white shadow-sm hover:bg-slate-800"
-																	data-cart-add
-																	data-cart-id={p.id}
-																	aria-label="Add to cart"
-																>
-																	<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-																		<path d="M12 5v14" />
-																		<path d="M5 12h14" />
-																	</svg>
-																</button>
-															</div>
-														</div>
-													</a>
-												))}
-											</div>
-										</section>
-									);
-								})}
-							</div>
-
-							<div id="products-empty" class="hidden rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-								Tidak ada produk yang cocok dengan filter.
-							</div>
-						</section>
-					</>
-				) : cmsError ? (
-					<div class="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900 shadow-sm">{cmsError}</div>
-				) : (
-					<div class="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-						{q ? `Produk "${q}" tidak ditemukan.` : 'Belum ada produk.'}
+				{cmsError ? (
+					<div class="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+						{cmsError}
 					</div>
-				)}
-			</div>
-		</div>
+				) : (
+					<>
+						<section class="mt-8">
+							<div class="flex items-center justify-between gap-4">
+								<div>
+									<h2 class="text-lg font-semibold tracking-tight text-slate-900">Curated Product Grid</h2>
+									<p class="mt-1 text-sm text-slate-600">Luxury essentials dalam palet monokrom.</p>
+								</div>
+								<div class="text-sm text-slate-500"><span id="products-count">{productsForGrid.length}</span> items</div>
+							</div>
 
+							<div id="product-grid" class="mt-6 grid grid-cols-3 grid-rows-2 gap-4">
+								{productsForGrid.map((p) => {
+									const isSale = p.id % 3 === 0;
+									return (
+										<article
+									data-product-card
+									data-title={p.title.toLowerCase()}
+									data-category={p.category}
+									data-new={String(p.id % 2 === 0)}
+									data-sale={String(isSale)}
+									data-price={String(p.price)}
+									data-rating={String(p.ratingValue)}
+									data-size={p.size}
+									data-color={p.color}
+									class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white transition duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+								>
+									<div class="relative h-60 overflow-hidden bg-slate-100">
+										<img src={p.imageUrl} alt={p.title} loading="lazy" class="h-full w-full object-cover transition duration-300 hover:scale-[1.03]" />
+										<span class="absolute left-3 top-3 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-white">New</span>
+										{isSale ? (
+											<span class="absolute right-3 top-3 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-900">Sale</span>
+										) : null}
+									</div>
+									<div class="space-y-3 p-4">
+										<div class="text-sm font-semibold text-slate-900">{p.title}</div>
+										<div class="flex flex-col gap-1 text-xs uppercase tracking-[0.28em] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+											<span>{p.category}</span>
+											<span>{p.size} · {p.color}</span>
+										</div>
+										<div class="flex items-center justify-between gap-3">
+											<div class="text-base font-bold text-slate-900">{formatRupiah(p.price)}</div>
+											<button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition hover:bg-slate-800" data-cart-add data-cart-id={p.id} aria-label="Add to cart">
+												<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<path d="M12 5v14" />
+													<path d="M5 12h14" />
+												</svg>
+											</button>
+										</div>
+									</div>
+								</article>
+							);
+						})}
+					</div>
+				</section>
+
+				<div id="products-empty" class="hidden rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+					Tidak ada produk yang cocok dengan filter.
+				</div>
+							</>
+						)}
 		<script is:inline>
-			function scrollSlider(id, dir) {
-				const el = document.getElementById(id);
-				if (!el) return;
-				const step = Math.max(210, Math.floor(el.clientWidth * 0.8));
-				el.scrollBy({ left: dir * step, behavior: 'smooth' });
-			}
-			function parseNumber(value) {
-				const n = Number(String(value || '').trim());
-				return Number.isFinite(n) ? n : null;
-			}
-
-			window.marketplaceFilterBar = function marketplaceFilterBar({ initialSearch }) {
+			window.fashionMarketplace = function fashionMarketplace({ initialSearch }) {
 				return {
 					open: false,
 					search: String(initialSearch || ''),
-					category: '',
-					priceRange: '',
-					pedas: false,
-					promo: false,
-					rating45: false,
+					activeCategory: 'All',
+					activeFilters: { new: false, sale: false, rating: false },
+					size: '',
+					color: '',
+					price: '',
 					init() {
 						this.apply();
 					},
 					togglePill(key) {
-						if (key === 'pedas') this.pedas = !this.pedas;
-						if (key === 'promo') this.promo = !this.promo;
-						if (key === 'rating') this.rating45 = !this.rating45;
+						this.activeFilters[key] = !this.activeFilters[key];
+						this.apply();
+					},
+					setCategory(category) {
+						this.activeCategory = category;
 						this.apply();
 					},
 					apply() {
 						const search = String(this.search || '').trim().toLowerCase();
-						const category = String(this.category || '').trim();
-						const pedas = !!this.pedas;
-						const promo = !!this.promo;
-						const rating45 = !!this.rating45;
-						const priceRange = String(this.priceRange || '').trim();
+						const category = String(this.activeCategory || '').trim();
+						const showNew = !!this.activeFilters.new;
+						const showSale = !!this.activeFilters.sale;
+						const showRating = !!this.activeFilters.rating;
+						const size = String(this.size || '').trim();
+						const color = String(this.color || '').trim();
+						const price = String(this.price || '').trim();
 
-						let priceMin = null;
-						let priceMax = null;
-						if (priceRange.includes('-')) {
-							const [a, b] = priceRange.split('-');
-							priceMin = parseNumber(a);
-							priceMax = parseNumber(b);
+						let minPrice = null;
+						let maxPrice = null;
+						if (price.includes('-')) {
+							const [a, b] = price.split('-');
+							minPrice = Number(a) || null;
+							maxPrice = Number(b) || null;
 						}
 
-						const cards = Array.from(document.querySelectorAll('#catalog .product-card'));
+						const cards = Array.from(document.querySelectorAll('[data-product-card]'));
 						let shown = 0;
+
 						for (const card of cards) {
 							const title = String(card.getAttribute('data-title') || '');
 							const cat = String(card.getAttribute('data-category') || '');
-							const level = parseNumber(card.getAttribute('data-level')) ?? 0;
-							const price = parseNumber(card.getAttribute('data-price')) ?? 0;
-							const rating = parseNumber(card.getAttribute('data-rating')) ?? 0;
-							const isPromo = String(card.getAttribute('data-promo') || '') === 'true';
+							const isNew = String(card.getAttribute('data-new') || '') === 'true';
+							const isSale = String(card.getAttribute('data-sale') || '') === 'true';
+							const cardRating = Number(card.getAttribute('data-rating') || '0');
+							const cardSize = String(card.getAttribute('data-size') || '');
+							const cardColor = String(card.getAttribute('data-color') || '');
+							const cardPrice = Number(card.getAttribute('data-price') || '0');
 
-							let ok = true;
-							if (search && !title.includes(search)) ok = false;
-							if (category && cat !== category) ok = false;
-							if (pedas && level < 7) ok = false;
-							if (promo && !isPromo) ok = false;
-							if (rating45 && rating < 4.5) ok = false;
-							if (priceMin !== null && price < priceMin) ok = false;
-							if (priceMax !== null && price > priceMax) ok = false;
+							let visible = true;
+							if (search && !title.includes(search)) visible = false;
+							if (category && category !== 'All' && cat !== category) visible = false;
+							if (showNew && !isNew) visible = false;
+							if (showSale && !isSale) visible = false;
+							if (showRating && cardRating < 4.5) visible = false;
+							if (size && cardSize !== size) visible = false;
+							if (color && cardColor !== color) visible = false;
+							if (minPrice !== null && cardPrice < minPrice) visible = false;
+							if (maxPrice !== null && cardPrice > maxPrice) visible = false;
 
-							if (ok) {
+							if (visible) {
 								card.classList.remove('hidden');
 								shown += 1;
 							} else {
@@ -541,17 +437,6 @@ const productsByCategory: Record<string, ProductView[]> = Object.fromEntries(
 
 						const countEl = document.getElementById('products-count');
 						if (countEl) countEl.textContent = String(shown);
-
-						const perCat = new Map();
-						for (const card of cards) {
-							if (card.classList.contains('hidden')) continue;
-							const cat = String(card.getAttribute('data-category') || '');
-							perCat.set(cat, (perCat.get(cat) ?? 0) + 1);
-						}
-						for (const el of Array.from(document.querySelectorAll('.category-count'))) {
-							const cat = String(el.getAttribute('data-category-count') || '');
-							el.textContent = String(perCat.get(cat) ?? 0);
-						}
 
 						const emptyEl = document.getElementById('products-empty');
 						if (emptyEl) emptyEl.classList.toggle('hidden', shown !== 0);

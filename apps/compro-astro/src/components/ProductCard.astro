@@ -1,0 +1,13 @@
+---
+const { title, imageUrl, category, price, href = '#' } = Astro.props;
+---
+<a href={href} class="group block overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+	<div class="aspect-[4/5] overflow-hidden bg-slate-100">
+		<img src={imageUrl} alt={title} loading="lazy" class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
+	</div>
+	<div class="space-y-1 p-4">
+		<p class="text-sm font-semibold text-slate-900">{title}</p>
+		<p class="text-xs uppercase tracking-[0.18em] text-slate-500">{category}</p>
+		<p class="text-base font-bold text-slate-900">{price}</p>
+	</div>
+</a>
