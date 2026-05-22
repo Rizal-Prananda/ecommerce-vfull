@@ -322,9 +322,11 @@ Route::get('/dashboard/chat/{conversationId}/poll', [\App\Http\Controllers\ChatA
 Route::post('/dashboard/chat/{conversationId}/reply', [\App\Http\Controllers\ChatAdminController::class, 'reply'])->middleware('admin');
 
 Route::prefix('admin')->middleware('admin')->group(function () {
-    Route::resource('products', ProductController::class)->except(['show']);
+    Route::resource('products', ProductController::class)->except(['show', 'destroy']);
     Route::get('stock', [ProductController::class, 'stock'])->name('products.stock');
     Route::put('stock/{product}', [ProductController::class, 'updateStock'])->name('products.stock.update');
     Route::get('stock/{product}/adjustment', [ProductController::class, 'adjustment'])->name('products.stock.adjustment');
     Route::get('stock/{product}/mutations', [ProductController::class, 'mutations'])->name('products.stock.mutations');
+    Route::post('stock/{product}/mutations', [ProductController::class, 'storeMutation'])->name('products.stock.mutations.store');
+    Route::get('stock/{product}/mutations/export', [ProductController::class, 'exportMutations'])->name('products.stock.mutations.export');
 });

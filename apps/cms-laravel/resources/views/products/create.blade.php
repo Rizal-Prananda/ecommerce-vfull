@@ -40,6 +40,30 @@
                     </div>
 
                     <div>
+                        <label class="text-sm font-medium text-slate-700" for="label">Label</label>
+                        <select id="label" name="label" class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                            <option value="none" {{ old('label', 'none') === 'none' ? 'selected' : '' }}>Tanpa Label</option>
+                            <option value="new" {{ old('label') === 'new' ? 'selected' : '' }}>New</option>
+                            <option value="promo" {{ old('label') === 'promo' ? 'selected' : '' }}>Promo</option>
+                            <option value="best_seller" {{ old('label') === 'best_seller' ? 'selected' : '' }}>Best Seller</option>
+                        </select>
+                        @error('label')
+                        <div class="mt-1.5 text-xs text-red-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-medium text-slate-700" for="unit">Satuan</label>
+                        <select id="unit" name="unit" class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                            <option value="Pieces" {{ old('unit', 'Pieces') === 'Pieces' ? 'selected' : '' }}>Pieces</option>
+                            <option value="Unit" {{ old('unit', 'Pieces') === 'Unit' ? 'selected' : '' }}>Unit</option>
+                        </select>
+                        @error('unit')
+                        <div class="mt-1.5 text-xs text-red-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div>
                         <label class="text-sm font-medium text-slate-700" for="price">Price</label>
                         <input id="price" name="price" type="text" value="{{ old('price') }}" class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
                         @error('price')
@@ -67,20 +91,6 @@
                         <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
                             <input type="checkbox" name="is_active" value="1" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" {{ old('is_active', '1') ? 'checked' : '' }} />
                             Active
-                        </label>
-                    </div>
-
-                    <div class="flex items-end">
-                        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                            <input type="checkbox" name="is_new" value="1" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" {{ old('is_new') ? 'checked' : '' }} />
-                            New
-                        </label>
-                    </div>
-
-                    <div class="flex items-end">
-                        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                            <input type="checkbox" name="is_sale" value="1" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" {{ old('is_sale') ? 'checked' : '' }} />
-                            Sale
                         </label>
                     </div>
 

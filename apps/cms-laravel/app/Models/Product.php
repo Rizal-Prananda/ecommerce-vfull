@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'slug', 'category', 'price', 'rating', 'image', 'stock', 'is_active', 'is_new', 'is_sale'])]
+#[Fillable(['title', 'slug', 'category', 'unit', 'price', 'rating', 'image', 'stock', 'is_active', 'is_new', 'is_sale', 'is_best_seller'])]
 class Product extends Model
 {
     use HasFactory;
@@ -28,6 +28,7 @@ class Product extends Model
             'is_active' => 'boolean',
             'is_new' => 'boolean',
             'is_sale' => 'boolean',
+            'is_best_seller' => 'boolean',
         ];
     }
 
