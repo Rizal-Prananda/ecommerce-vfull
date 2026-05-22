@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ProductApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -515,73 +516,5 @@ Route::get('/categories', function () {
     ]);
 });
 
-Route::get('/products', function (Request $request) {
-    $categoryId = $request->integer('categoryId');
-    $q = trim((string) $request->query('q', ''));
-    $items = [
-        [
-            'id' => 1,
-            'title' => 'Office Chair Minimal',
-            'categoryId' => 5,
-            'price' => 1299000,
-            'rating' => 4.7,
-            'image' => 'https://picsum.photos/seed/chair/600/450',
-            'location' => 'Jakarta',
-        ],
-        [
-            'id' => 2,
-            'title' => 'Smart Watch Pro',
-            'categoryId' => 2,
-            'price' => 899000,
-            'rating' => 4.6,
-            'image' => 'https://picsum.photos/seed/watch/600/450',
-            'location' => 'Bandung',
-        ],
-        [
-            'id' => 3,
-            'title' => 'Interior Consultation',
-            'categoryId' => 4,
-            'price' => 299000,
-            'rating' => 4.9,
-            'image' => 'https://picsum.photos/seed/consult/600/450',
-            'location' => 'Online',
-        ],
-        [
-            'id' => 4,
-            'title' => 'Apartment Studio Listing',
-            'categoryId' => 3,
-            'price' => 15000000,
-            'rating' => 4.8,
-            'image' => 'https://picsum.photos/seed/apartment/600/450',
-            'location' => 'Surabaya',
-        ],
-        [
-            'id' => 5,
-            'title' => 'Wireless Earbuds',
-            'categoryId' => 2,
-            'price' => 399000,
-            'rating' => 4.5,
-            'image' => 'https://picsum.photos/seed/earbuds/600/450',
-            'location' => 'Semarang',
-        ],
-        [
-            'id' => 6,
-            'title' => 'Featured Starter Kit',
-            'categoryId' => 1,
-            'price' => 499000,
-            'rating' => 4.8,
-            'image' => 'https://picsum.photos/seed/featured/600/450',
-            'location' => 'Jakarta',
-        ],
-    ];
-
-    if ($categoryId) {
-        $items = array_values(array_filter($items, fn($x) => (int) $x['categoryId'] === $categoryId));
-    }
-
-    if ($q !== '') {
-        $items = array_values(array_filter($items, fn($x) => str_contains(mb_strtolower($x['title']), mb_strtolower($q))));
-    }
-
-    return response()->json(['data' => $items]);
-});
+Route::get('/products', [ProductApiController::class, 'index']);
+Route::get('/products/{slug}', [ProductApiController::class, 'show']);

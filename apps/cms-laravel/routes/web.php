@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProductController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -38,6 +39,26 @@ function ensureBootstrapAdmin(): void
 Route::get('/', function () {
     return redirect('/dashboard');
 });
+
+Route::get('/product-media/{path}', function (string $path) {
+    $path = ltrim($path, '/');
+    if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'products/')) {
+        abort(404);
+    }
+
+    $ext = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+    if (!in_array($ext, ['webp', 'svg'], true)) {
+        abort(404);
+    }
+
+    if (!Storage::disk('public')->exists($path)) {
+        abort(404);
+    }
+
+    return Storage::disk('public')->response($path, null, [
+        'Cache-Control' => 'public, max-age=604800',
+    ]);
+})->where('path', '.*');
 
 Route::get('/login', function () {
     ensureBootstrapAdmin();
@@ -299,3 +320,11 @@ Route::get('/dashboard/chat/poll', [\App\Http\Controllers\ChatAdminController::c
 Route::get('/dashboard/chat/{conversationId}', [\App\Http\Controllers\ChatAdminController::class, 'viewConversation'])->middleware('admin');
 Route::get('/dashboard/chat/{conversationId}/poll', [\App\Http\Controllers\ChatAdminController::class, 'pollConversation'])->middleware('admin');
 Route::post('/dashboard/chat/{conversationId}/reply', [\App\Http\Controllers\ChatAdminController::class, 'reply'])->middleware('admin');
+
+Route::prefix('admin')->middleware('admin')->group(function () {
+    Route::resource('products', ProductController::class)->except(['show']);
+    Route::get('stock', [ProductController::class, 'stock'])->name('products.stock');
+    Route::put('stock/{product}', [ProductController::class, 'updateStock'])->name('products.stock.update');
+    Route::get('stock/{product}/adjustment', [ProductController::class, 'adjustment'])->name('products.stock.adjustment');
+    Route::get('stock/{product}/mutations', [ProductController::class, 'mutations'])->name('products.stock.mutations');
+});

@@ -1,24 +1,28 @@
-﻿---
+---
 import Layout from '../../layouts/Layout.astro';
 
 type Product = {
 	id: number;
 	title: string;
-	categoryId?: number;
-	price: number;
-	rating?: number;
-	image?: string;
-	location?: string;
+	slug: string;
+	category: string;
+	price_formatted: string;
+	rating: number;
+	image_url: string | null;
+	stock: number;
+	is_new?: boolean;
+	is_sale?: boolean;
+	is_sold?: boolean;
 };
 
 type ProductView = Product & {
-	category: string;
 	sold: number;
 	imageUrl: string;
 	ratingValue: number;
 	isMock: boolean;
 	size: string;
 	color: string;
+	priceValue: number;
 };
 
 const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001';
@@ -38,28 +42,18 @@ try {
 	cmsError = `Gagal mengambil data dari CMS (${CMS_URL}). Pastikan Laravel CMS sedang jalan.`;
 }
 
-function slugify(input: string) {
-	return input
-		.toLowerCase()
-		.trim()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/(^-|-$)/g, '');
+function rupiahToNumber(input: string) {
+	const digits = String(input || '').replace(/[^\d]/g, '');
+	const n = Number(digits || '0');
+	return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0;
 }
 
-function formatRupiah(v: number) {
-	return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
-}
-
-const categories = ['T-Shirts', 'Shirts', 'Hoodies', 'Pants', 'Jackets', 'Shoes', 'Accessories'];
+const categoriesFromApi = Array.from(
+	new Set(products.map((p) => String(p?.category || '').trim()).filter(Boolean)),
+).sort((a, b) => a.localeCompare(b));
+const categories = categoriesFromApi.length ? categoriesFromApi : ['General'];
 const sizes = ['S', 'M', 'L', 'XL'];
 const colors = ['Black', 'White', 'Grey', 'Ivory'];
-
-function pickCategory(p: Product) {
-	if (typeof p.categoryId === 'number' && Number.isFinite(p.categoryId)) {
-		return categories[Math.abs(p.categoryId) % categories.length] ?? 'T-Shirts';
-	}
-	return categories[p.id % categories.length] ?? 'T-Shirts';
-}
 
 function ratingFrom(p: Product) {
 	const v = typeof p.rating === 'number' && Number.isFinite(p.rating) ? p.rating : 0;
@@ -67,62 +61,25 @@ function ratingFrom(p: Product) {
 }
 
 const productsView: ProductView[] = products.map((p, idx) => {
-	const category = pickCategory(p);
 	const ratingValue = ratingFrom(p);
 	const size = sizes[p.id % sizes.length];
 	const color = colors[p.id % colors.length];
 	const photoNum = (idx % 6) + 1;
+	const imageUrl = (p.image_url && String(p.image_url).trim() !== '') ? String(p.image_url) : `/marketplace/baju ${photoNum}.webp`;
 
 	return {
 		...p,
-		category,
 		sold: 20 + ((p.id * 37) % 800),
 		ratingValue,
-		imageUrl: `/marketplace/baju ${photoNum}.webp`,
+		imageUrl,
 		isMock: false,
 		size,
 		color,
+		priceValue: rupiahToNumber(p.price_formatted),
 	};
 });
 
-function makeMockProduct(index: number): ProductView {
-	const id = 100000 + index;
-	const presets = [
-		{ title: 'Monogram Oversized Tee', category: 'T-Shirts', color: 'White', photoNum: 1, basePrice: 329000 },
-		{ title: 'Essential Boxy Hoodie', category: 'Hoodies', color: 'Black', photoNum: 2, basePrice: 549000 },
-		{ title: 'Utility Overshirt Jacket', category: 'Jackets', color: 'Grey', photoNum: 3, basePrice: 629000 },
-		{ title: 'Tailored Wide Pants', category: 'Pants', color: 'Ivory', photoNum: 4, basePrice: 489000 },
-		{ title: 'Minimal Leather Belt', category: 'Accessories', color: 'Black', photoNum: 5, basePrice: 199000 },
-		{ title: 'Suede Low-Top Sneaker', category: 'Shoes', color: 'Grey', photoNum: 6, basePrice: 699000 },
-	];
-	const preset = presets[index % presets.length] ?? presets[0]!;
-	const title = preset.title;
-	const category = preset.category;
-	const price = preset.basePrice + ((index % 7) * 10000);
-	const ratingValue = Number((4.2 + ((index % 9) / 20)).toFixed(1));
-	const size = sizes[index % sizes.length];
-	const color = preset.color;
-	const photoNum = preset.photoNum;
-
-	return {
-		id,
-		title,
-		price,
-		category,
-		sold: 50 + ((index * 29) % 1200),
-		ratingValue,
-		imageUrl: `/marketplace/baju ${photoNum}.webp`,
-		isMock: true,
-		size,
-		color,
-	};
-}
-
-const desiredGridCount = 6;
-const productsForGrid: ProductView[] = [...productsView];
-for (let i = 0; productsForGrid.length < desiredGridCount; i += 1) {
-	productsForGrid.push(makeMockProduct(i));
-}
+const productsForGrid: ProductView[] = productsView;
 
 const featuredCollections = [
 	{ title: 'New Arrivals', subtitle: 'Fresh luxury', image: '/images/collection-new-arrivals.jpg' },
@@ -322,7 +279,7 @@ const featuredCollections = [
 						{cmsError ? (
 							<div class="rounded-2xl border border-zinc-100 bg-white p-6 text-sm text-zinc-600 shadow-sm">{cmsError}</div>
 						) : (
-							<>
+							<Fragment>
 								<div class="flex items-end justify-between gap-6">
 									<div>
 										<h2 class="text-2xl font-semibold tracking-tight text-zinc-900">Avenue Collective</h2>
@@ -333,10 +290,12 @@ const featuredCollections = [
 
 								<div id="product-grid" class="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 									{productsForGrid.map((p, idx) => {
-										const isSale = p.id % 3 === 0;
-										const isNew = p.id % 2 === 0;
+										const isSale = !!p.is_sale;
+										const isNew = !!p.is_new;
+										const isSold = typeof p.is_sold === 'boolean' ? p.is_sold : !((p.stock ?? 0) > 0);
 										const showSale = isSale;
 										const showNew = !showSale && isNew;
+										const showSold = !showSale && !showNew && isSold;
 
 										return (
 											<article
@@ -345,7 +304,7 @@ const featuredCollections = [
 												data-category={p.category}
 												data-new={String(isNew)}
 												data-sale={String(isSale)}
-												data-price={String(p.price)}
+												data-price={String(p.priceValue)}
 												data-rating={String(p.ratingValue)}
 												data-size={p.size}
 												data-color={p.color}
@@ -372,6 +331,12 @@ const featuredCollections = [
 														</span>
 													) : null}
 
+													{showSold ? (
+														<span class="absolute right-3 top-3 rounded-full bg-amber-500 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white">
+															Sold
+														</span>
+													) : null}
+
 													<div class="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/35 via-black/0 to-black/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
 														<div class="mb-4 rounded-full bg-white/90 px-4 py-2 text-xs font-semibold text-black shadow-sm">Quick View</div>
 													</div>
@@ -382,7 +347,7 @@ const featuredCollections = [
 														<div class="mt-1 min-h-[2.75rem] text-lg font-semibold leading-tight text-zinc-900 line-clamp-2">{p.title}</div>
 
 														<div class="mt-2 mb-4 flex items-center justify-between gap-3">
-															<div class="text-xl font-bold text-zinc-900">{formatRupiah(p.price)}</div>
+																<div class="text-xl font-bold text-zinc-900">{p.price_formatted}</div>
 															<div class="inline-flex items-center gap-1.5 text-sm text-zinc-500">
 																<svg class="h-4 w-4 text-zinc-900" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 																	<path d="M12 17.27 18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27Z" />
@@ -393,11 +358,12 @@ const featuredCollections = [
 
 														<button
 															type="button"
-															class="relative mt-auto inline-flex w-full items-center justify-center overflow-hidden rounded-xl bg-zinc-900 py-3 text-sm font-medium text-white shadow-sm transition active:scale-95 hover:bg-zinc-800"
+															class="relative mt-auto inline-flex w-full items-center justify-center overflow-hidden rounded-xl bg-zinc-900 py-3 text-sm font-medium text-white shadow-sm transition active:scale-95 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
 															data-cart-add
 															data-cart-id={p.id}
 															data-cart-title={p.title}
 															aria-label={`Add ${p.title} to cart`}
+															disabled={showSold}
 														>
 															Add to Cart
 														</button>
@@ -419,7 +385,7 @@ const featuredCollections = [
 										<div class="mt-2 text-sm text-zinc-500">Try adjusting your filters or search terms.</div>
 									</div>
 								</div>
-							</>
+							</Fragment>
 						)}
 					</div>
 				</section>

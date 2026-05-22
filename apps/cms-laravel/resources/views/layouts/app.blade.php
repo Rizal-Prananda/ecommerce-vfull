@@ -19,7 +19,7 @@
 <body class="h-screen bg-slate-50 text-slate-900 antialiased">
     <style>
         [x-cloak] {
-        display: none !important;
+            display: none !important;
         }
 
         #cms-admin {
@@ -65,13 +65,13 @@
             background: linear-gradient(90deg, rgba(200, 217, 230, 0.18), rgba(86, 124, 141, 0.22)) !important;
             color: #ffffff !important;
             border-left: 3px solid #c8d9e6 !important;
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03) !important;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03) !important;
         }
 
         /* HEADER */
         header {
             background: #2f4156 !important;
-            border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
         }
 
         /* MAIN */
@@ -86,8 +86,8 @@
             background: #ffffff !important;
             border-color: rgba(47, 65, 86, 0.08) !important;
             box-shadow:
-            0 4px 14px rgba(47, 65, 86, 0.05),
-            0 1px 2px rgba(47, 65, 86, 0.04) !important;
+                0 4px 14px rgba(47, 65, 86, 0.05),
+                0 1px 2px rgba(47, 65, 86, 0.04) !important;
         }
 
         /* TITLE */
@@ -107,33 +107,33 @@
 
         /* TABLE HEADER */
         thead {
-          background: #f5efeb !important;
+            background: #f5efeb !important;
         }
 
         thead th {
-         color: #567c8d !important;
+            color: #567c8d !important;
         }
 
         tbody tr:hover {
-         background: rgba(200, 217, 230, 0.18) !important;
+            background: rgba(200, 217, 230, 0.18) !important;
         }
 
         /* ICON BOX */
         .bg-blue-50 {
-         background: rgba(200, 217, 230, 0.35) !important;
+            background: rgba(200, 217, 230, 0.35) !important;
         }
 
         .text-blue-600 {
-         color: #567c8d !important;
+            color: #567c8d !important;
         }
 
         /* BUTTON PRIMARY */
         .bg-slate-900 {
-          background: #567c8d !important;
+            background: #567c8d !important;
         }
 
         .bg-slate-900:hover {
-         background: #2f4156 !important;
+            background: #2f4156 !important;
         }
 
         /* BUTTON OUTLINE */
@@ -155,13 +155,13 @@
 
         /* ENDPOINT BOX */
         .bg-gray-50 {
-         background: #f5efeb !important;
+            background: #f5efeb !important;
         }
 
         /* INPUT / ACTION CARD */
         .shadow-sm {
             box-shadow:
-            0 2px 10px rgba(47, 65, 86, 0.05) !important;
+                0 2px 10px rgba(47, 65, 86, 0.05) !important;
         }
     </style>
 
@@ -247,8 +247,7 @@
 
                     <div
                         x-data="{ open: {{ request()->is('report*') ? 'true' : 'false' }} }"
-                        @sidebar-dropdown-opened.window="if ($event.detail !== 'report') open = false"
-                    >
+                        @sidebar-dropdown-opened.window="if ($event.detail !== 'report') open = false">
                         <button
                             type="button"
                             @click="
@@ -258,8 +257,7 @@
                             class="group relative flex w-full items-center rounded-lg text-sm font-medium transition-all duration-200 {{ request()->is('report*') ? 'bg-[#1A56DB] text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white' }}"
                             :class="sidebarOpen ? 'gap-3 px-4 py-2.5 justify-start' : 'gap-0 px-2 py-2.5 justify-center'"
                             :aria-expanded="open"
-                            aria-haspopup="menu"
-                        >
+                            aria-haspopup="menu">
                             <svg class="size-5 shrink-0 {{ request()->is('report*') ? 'text-white' : 'text-gray-300 group-hover:text-white' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M4 19V5" />
                                 <path d="M4 19h16" />
@@ -273,8 +271,7 @@
                                 x-show="!sidebarOpen"
                                 x-transition
                                 x-cloak
-                                class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible"
-                            >
+                                class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
                                 Report
                             </div>
 
@@ -287,8 +284,7 @@
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
-                                stroke-width="2"
-                            >
+                                stroke-width="2">
                                 <path d="M6 9l6 6 6-6" />
                             </svg>
                         </button>
@@ -296,8 +292,7 @@
                         <div x-show="sidebarOpen && open" x-collapse x-cloak class="mt-1 ml-4 space-y-1 border-l border-white/10 pl-4">
                             <a
                                 href="/report/penjualan"
-                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('report/penjualan*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}"
-                            >
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('report/penjualan*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
                                 <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M4 19V5" />
                                     <path d="M4 19h16" />
@@ -310,8 +305,7 @@
 
                             <a
                                 href="/report/pelanggan"
-                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('report/pelanggan*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}"
-                            >
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('report/pelanggan*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
                                 <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                                     <circle cx="9" cy="7" r="4" />
@@ -323,8 +317,7 @@
 
                             <a
                                 href="/report/produk"
-                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('report/produk*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}"
-                            >
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('report/produk*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
                                 <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
                                     <path d="M3.3 7l8.7 5 8.7-5" />
@@ -335,8 +328,7 @@
 
                             <a
                                 href="/report/keuangan"
-                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('report/keuangan*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}"
-                            >
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('report/keuangan*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
                                 <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 1v22" />
                                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" />
@@ -346,14 +338,81 @@
 
                             <a
                                 href="/report/export"
-                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('report/export*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}"
-                            >
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('report/export*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
                                 <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                     <path d="M7 10l5 5 5-5" />
                                     <path d="M12 15V3" />
                                 </svg>
                                 <span>Export Data</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div
+                        x-data="{ open: {{ request()->is('admin/products*') || request()->is('admin/stock*') ? 'true' : 'false' }} }"
+                        @sidebar-dropdown-opened.window="if ($event.detail !== 'product') open = false">
+                        <button
+                            type="button"
+                            @click="
+                                open = !open;
+                                if (open) { $dispatch('sidebar-dropdown-opened', 'product'); }
+                            "
+                            class="group relative flex w-full items-center rounded-lg text-sm font-medium transition-all duration-200 {{ request()->is('admin/products*') || request()->is('admin/stock*') ? 'bg-[#1A56DB] text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white' }}"
+                            :class="sidebarOpen ? 'gap-3 px-4 py-2.5 justify-start' : 'gap-0 px-2 py-2.5 justify-center'"
+                            :aria-expanded="open"
+                            aria-haspopup="menu">
+                            <svg class="size-5 shrink-0 {{ request()->is('admin/products*') || request()->is('admin/stock*') ? 'text-white' : 'text-gray-300 group-hover:text-white' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                                <path d="M3.3 7l8.7 5 8.7-5" />
+                                <path d="M12 22V12" />
+                            </svg>
+                            <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>Product</span>
+
+                            <div
+                                x-show="!sidebarOpen"
+                                x-transition
+                                x-cloak
+                                class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                                Product
+                            </div>
+
+                            <svg
+                                x-show="sidebarOpen"
+                                x-transition.opacity.duration.200ms
+                                x-cloak
+                                class="ml-auto size-4 text-gray-300 transition-transform"
+                                :class="open ? 'rotate-180' : ''"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+
+                        <div x-show="sidebarOpen && open" x-collapse x-cloak class="mt-1 ml-4 space-y-1 border-l border-white/10 pl-4">
+                            <a
+                                href="{{ route('products.index') }}"
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('admin/products*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
+                                <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                                    <path d="M3.3 7l8.7 5 8.7-5" />
+                                    <path d="M12 22V12" />
+                                </svg>
+                                <span>List Produk</span>
+                            </a>
+                            <a
+                                href="{{ route('products.stock') }}"
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('admin/stock*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
+                                <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19V5" />
+                                    <path d="M4 19h16" />
+                                    <path d="M8 17v-5" />
+                                    <path d="M12 17V9" />
+                                    <path d="M16 17v-3" />
+                                </svg>
+                                <span>Stock Produk</span>
                             </a>
                         </div>
                     </div>
