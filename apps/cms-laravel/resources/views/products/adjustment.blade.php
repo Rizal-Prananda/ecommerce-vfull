@@ -175,5 +175,6 @@ $unitLabel = $unitRaw === 'Pieces' ? 'Pcs' : $unitRaw;
             </div>
         </div>
     </form>
+
 </div>
 @endsection

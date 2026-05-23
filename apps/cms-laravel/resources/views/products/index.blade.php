@@ -62,10 +62,9 @@
                 <tbody class="divide-y divide-zinc-100">
                     @forelse ($products as $p)
                     @php
-                    $isNew = $p->created_at && $p->created_at->diffInDays() < 7;
                         $stock=(int) ($p->stock ?? 0);
                         $unit = (string) ($p->unit ?? 'Pcs');
-                        @endphp
+                    @endphp
                         <tr class="hover:bg-zinc-50">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
@@ -79,15 +78,21 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                @if ($isNew)
-                                <span class="inline-flex items-center rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white">New</span>
-                                @elseif ($stock === 0)
-                                <span class="inline-flex items-center rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white">Habis</span>
-                                @elseif ($stock < 10)
-                                    <span class="inline-flex items-center rounded-md bg-amber-500 px-2.5 py-1 text-xs font-medium text-white">Stok Tipis</span>
-                                    @else
+                                @php
+                                    $code = strtolower((string) ($p->mstLabel?->code ?? ''));
+                                    $name = (string) ($p->mstLabel?->name ?? '');
+                                @endphp
+                                @if ($code === 'promo')
+                                    <span class="inline-flex items-center rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white">{{ $name ?: 'Promo' }}</span>
+                                @elseif ($code === 'best_seller')
+                                    <span class="inline-flex items-center rounded-md bg-zinc-900 px-2.5 py-1 text-xs font-medium text-white">{{ $name ?: 'Best Seller' }}</span>
+                                @elseif ($code === 'new')
+                                    <span class="inline-flex items-center rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white">{{ $name ?: 'New' }}</span>
+                                @elseif ($name !== '')
+                                    <span class="inline-flex items-center rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700">{{ $name }}</span>
+                                @else
                                     <span class="text-zinc-400">-</span>
-                                    @endif
+                                @endif
                             </td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700">
@@ -99,9 +104,12 @@
                                 <div class="mt-1 text-xs text-zinc-500">★ {{ number_format((float) ($p->rating ?? 0), 1) }}</div>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="{{ $stock < 10 ? 'font-semibold text-red-600' : 'text-zinc-700' }}">
-                                    {{ $stock }} {{ $unit }}
-                                </div>
+                                <div class="{{ $stock < 10 ? 'font-semibold text-red-600' : 'text-zinc-700' }}">{{ $stock }} {{ $unit }}</div>
+                                @if ($stock === 0)
+                                    <div class="mt-1 inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">Habis</div>
+                                @elseif ($stock < 10)
+                                    <div class="mt-1 inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">Stok Tipis</div>
+                                @endif
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-2 text-sm">

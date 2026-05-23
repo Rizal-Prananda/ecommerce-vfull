@@ -15,6 +15,7 @@ class ProductApiController extends Controller
         $q = trim((string) $request->query('q', ''));
 
         $items = Product::query()
+            ->with(['mstLabel', 'variants.mstSize'])
             ->where('is_active', true)
             ->when($q !== '', function ($query) use ($q) {
                 $query->where('title', 'like', '%' . $q . '%')
@@ -29,6 +30,7 @@ class ProductApiController extends Controller
     public function show(string $slug): ProductResource
     {
         $product = Product::query()
+            ->with(['mstLabel', 'variants.mstSize'])
             ->where('slug', $slug)
             ->where('is_active', true)
             ->firstOrFail();
@@ -36,4 +38,3 @@ class ProductApiController extends Controller
         return new ProductResource($product);
     }
 }
-

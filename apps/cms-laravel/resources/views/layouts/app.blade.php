@@ -417,6 +417,67 @@
                         </div>
                     </div>
 
+                    <div
+                        x-data="{ open: {{ request()->is('admin/marketplace*') ? 'true' : 'false' }} }"
+                        @sidebar-dropdown-opened.window="if ($event.detail !== 'system') open = false">
+                        <button
+                            type="button"
+                            @click="
+                                open = !open;
+                                if (open) { $dispatch('sidebar-dropdown-opened', 'system'); }
+                            "
+                            class="group relative flex w-full items-center rounded-lg text-sm font-medium transition-all duration-200 {{ request()->is('admin/marketplace*') ? 'bg-[#1A56DB] text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white' }}"
+                            :class="sidebarOpen ? 'gap-3 px-4 py-2.5 justify-start' : 'gap-0 px-2 py-2.5 justify-center'"
+                            :aria-expanded="open"
+                            aria-haspopup="menu">
+                            <svg class="size-5 shrink-0 {{ request()->is('admin/marketplace*') ? 'text-white' : 'text-gray-300 group-hover:text-white' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 3v4" />
+                                <path d="M12 17v4" />
+                                <path d="M3 12h4" />
+                                <path d="M17 12h4" />
+                                <path d="M7.5 7.5l2.8 2.8" />
+                                <path d="M13.7 13.7l2.8 2.8" />
+                                <path d="M16.5 7.5l-2.8 2.8" />
+                                <path d="M10.3 13.7l-2.8 2.8" />
+                            </svg>
+                            <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>System Administration</span>
+
+                            <div
+                                x-show="!sidebarOpen"
+                                x-transition
+                                x-cloak
+                                class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                                System Administration
+                            </div>
+
+                            <svg
+                                x-show="sidebarOpen"
+                                x-transition.opacity.duration.200ms
+                                x-cloak
+                                class="ml-auto size-4 text-gray-300 transition-transform"
+                                :class="open ? 'rotate-180' : ''"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+
+                        <div x-show="sidebarOpen && open" x-collapse x-cloak class="mt-1 ml-4 space-y-1 border-l border-white/10 pl-4">
+                            <a
+                                href="{{ route('admin.marketplace.index') }}"
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('admin/marketplace*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
+                                <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 7h18" />
+                                    <path d="M6 7l1 14h10l1-14" />
+                                    <path d="M9 7V5a3 3 0 0 1 6 0v2" />
+                                </svg>
+                                <span>Marketplace</span>
+                            </a>
+                        </div>
+                    </div>
+
                 </div>
             </nav>
 

@@ -4,17 +4,9 @@
 
 @section('content')
 @php
-$labelValue = old('label');
-if ($labelValue === null) {
-if ($product->is_best_seller) {
-$labelValue = 'best_seller';
-} elseif ($product->is_sale) {
-$labelValue = 'promo';
-} elseif ($product->is_new) {
-$labelValue = 'new';
-} else {
-$labelValue = 'none';
-}
+$labelId = old('mst_label_id');
+if ($labelId === null) {
+    $labelId = $product->mst_label_id;
 }
 @endphp
 
@@ -62,13 +54,14 @@ $labelValue = 'none';
 
                     <div>
                         <label class="text-sm font-medium text-zinc-700" for="label">Label</label>
-                        <select id="label" name="label" class="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900">
-                            <option value="none" {{ $labelValue === 'none' ? 'selected' : '' }}>Tanpa Label</option>
-                            <option value="new" {{ $labelValue === 'new' ? 'selected' : '' }}>New</option>
-                            <option value="promo" {{ $labelValue === 'promo' ? 'selected' : '' }}>Promo</option>
-                            <option value="best_seller" {{ $labelValue === 'best_seller' ? 'selected' : '' }}>Best Seller</option>
+                        <select id="label" name="mst_label_id" class="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900">
+                            @foreach (($labels ?? []) as $lbl)
+                                <option value="{{ $lbl->id }}" {{ (string) $labelId === (string) $lbl->id ? 'selected' : '' }}>
+                                    {{ $lbl->name }}
+                                </option>
+                            @endforeach
                         </select>
-                        @error('label')
+                        @error('mst_label_id')
                         <div class="mt-1.5 text-xs text-red-600">{{ $message }}</div>
                         @enderror
                     </div>
@@ -119,6 +112,129 @@ $labelValue = 'none';
                         @enderror
                     </div>
                 </div>
+            </div>
+
+            @php
+                $variantsMetaInitial = old('variants_meta');
+                if (!is_array($variantsMetaInitial)) {
+                    $variantsMetaInitial = [];
+                    foreach (($variants ?? []) as $v) {
+                        $variantsMetaInitial[] = [
+                            'id' => (int) ($v->id ?? 0),
+                            'mst_size_id' => (int) ($v->mst_size_id ?? 0),
+                            'size' => strtoupper(trim((string) ($v->mstSize?->code ?? $v->size ?? ''))),
+                            'sku' => (string) ($v->sku ?? ''),
+                            'color' => (string) ($v->color ?? ''),
+                            'stock' => (int) ($v->stock ?? 0),
+                            'price' => $v->price !== null ? (int) $v->price : null,
+                        ];
+                    }
+                }
+            @endphp
+            <div
+                class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm"
+                x-data="{
+                    sizes: @js(($sizes ?? [])->map(fn($s) => ['id' => (int) $s->id, 'code' => (string) $s->code])),
+                    defaultSizeId() {
+                        const m = (this.sizes || []).find((x) => String(x.code || '').toUpperCase() === 'M');
+                        return m ? Number(m.id) : (this.sizes?.[0]?.id ?? null);
+                    },
+                    variants: (@js($variantsMetaInitial) || []).map((row) => ({
+                        id: row?.id ?? null,
+                        mst_size_id: Number(row?.mst_size_id ?? 0) || null,
+                        size: String(row?.size ?? '').toUpperCase().trim() || '',
+                        sku: String(row?.sku ?? ''),
+                        color: String(row?.color ?? ''),
+                        stock: Number(row?.stock ?? 0),
+                        price: row?.price ?? '',
+                    })),
+                    init() {
+                        this.variants = (this.variants || []).map((v) => {
+                            const code = String(v.size || '').toUpperCase().trim();
+                            if (!v.mst_size_id) {
+                                const found = (this.sizes || []).find((s) => String(s.code || '').toUpperCase() === code);
+                                v.mst_size_id = found ? Number(found.id) : this.defaultSizeId();
+                            }
+                            return v;
+                        });
+                    },
+                    addRow() { this.variants.push({ id: null, mst_size_id: this.defaultSizeId(), sku: '', color: '', stock: 0, price: '' }); },
+                    removeRow(i) { this.variants.splice(i, 1); },
+                }"
+            >
+                <div class="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                        <div class="text-sm font-semibold text-zinc-900">Variants &amp; Stock</div>
+                        <div class="mt-1 text-sm text-zinc-500">Atur ukuran dan SKU. Stok tidak bisa diubah di sini.</div>
+                    </div>
+                    <button type="button" class="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 active:scale-95 transition-all" @click="addRow()">
+                        Add Size
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead>
+                            <tr class="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                <th class="py-2 pr-4">Size</th>
+                                <th class="py-2 pr-4">SKU</th>
+                                <th class="py-2 pr-4">Color</th>
+                                <th class="py-2 pr-4">Stock</th>
+                                <th class="py-2 pr-4">Price Override</th>
+                                <th class="py-2">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100">
+                            <template x-for="(v, i) in variants" :key="i">
+                                <tr>
+                                    <td class="py-3 pr-4 align-top">
+                                        <input type="hidden" :name="`variants_meta[${i}][id]`" :value="v.id ?? ''" />
+                                        <select
+                                            class="h-10 w-24 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900"
+                                            :name="`variants_meta[${i}][mst_size_id]`"
+                                            x-init="$nextTick(() => { $el.value = String(v.mst_size_id ?? '') })"
+                                            @change="v.mst_size_id = Number($event.target.value)"
+                                        >
+                                            <template x-for="s in sizes" :key="s.id">
+                                                <option :value="s.id" :selected="Number(v.mst_size_id) === Number(s.id)" x-text="s.code"></option>
+                                            </template>
+                                        </select>
+                                    </td>
+                                    <td class="py-3 pr-4 align-top">
+                                        <input type="text" class="h-10 w-44 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900" :name="`variants_meta[${i}][sku]`" x-model="v.sku" placeholder="AV-TSHIRT-M" />
+                                    </td>
+                                    <td class="py-3 pr-4 align-top">
+                                        <input type="text" class="h-10 w-32 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900" :name="`variants_meta[${i}][color]`" x-model="v.color" placeholder="Black" />
+                                    </td>
+                                    <td class="py-3 pr-4 align-top">
+                                        <input type="number" class="h-10 w-24 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm font-semibold text-zinc-900 shadow-sm outline-none" :value="v.stock ?? 0" disabled readonly />
+                                    </td>
+                                    <td class="py-3 pr-4 align-top">
+                                        <div class="flex overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm focus-within:border-zinc-900 focus-within:ring-2 focus-within:ring-zinc-900">
+                                            <div class="flex items-center bg-zinc-50 px-3 text-sm font-semibold text-zinc-700">Rp</div>
+                                            <input type="number" min="0" class="h-10 w-40 border-0 bg-white px-3 text-sm text-zinc-900 outline-none" :name="`variants_meta[${i}][price]`" x-model="v.price" placeholder="(optional)" />
+                                        </div>
+                                    </td>
+                                    <td class="py-3 align-top">
+                                        <button type="button" class="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-900 shadow-sm hover:bg-zinc-50 active:scale-95 transition-all" @click="removeRow(i)">
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                @error('variants_meta')
+                    <div class="mt-3 text-xs text-red-600">{{ $message }}</div>
+                @enderror
+                @error('variants_meta.*.mst_size_id')
+                    <div class="mt-3 text-xs text-red-600">{{ $message }}</div>
+                @enderror
+                @error('variants_meta.*.sku')
+                    <div class="mt-3 text-xs text-red-600">{{ $message }}</div>
+                @enderror
             </div>
         </div>
 

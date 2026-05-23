@@ -5,18 +5,29 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'slug', 'category', 'unit', 'price', 'rating', 'image', 'stock', 'is_active', 'is_new', 'is_sale', 'is_best_seller'])]
+#[Fillable(['title', 'slug', 'category', 'mst_label_id', 'unit', 'price', 'rating', 'image', 'stock', 'is_active', 'is_new', 'is_sale', 'is_best_seller'])]
 class Product extends Model
 {
     use HasFactory;
 
+    public function mstLabel(): BelongsTo
+    {
+        return $this->belongsTo(MstLabel::class, 'mst_label_id');
+    }
+
     public function stockMovements(): HasMany
     {
         return $this->hasMany(ProductStockMovement::class);
+    }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class);
     }
 
     protected function casts(): array

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ProductApiController;
+use App\Models\SiteSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -10,6 +11,22 @@ use Illuminate\Support\Str;
 Route::get('/health', function () {
     return response()->json(['ok' => true]);
 });
+
+Route::get('/site-settings/{key}', function (string $key) {
+    $key = trim($key);
+    if ($key === '' || str_contains($key, '..')) {
+        abort(404);
+    }
+
+    $row = SiteSetting::query()->where('key', $key)->first();
+
+    return response()->json([
+        'data' => [
+            'key' => $key,
+            'value' => $row?->value,
+        ],
+    ]);
+})->where('key', '[A-Za-z0-9_\-]+');
 
 Route::post('/register', function (Request $request) {
     $validated = $request->validate([

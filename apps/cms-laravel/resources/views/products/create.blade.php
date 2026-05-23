@@ -20,6 +20,7 @@
     <div class="max-w-3xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <form method="POST" action="{{ route('products.store') }}" enctype="multipart/form-data">
             @csrf
+            <input type="hidden" name="variants_present" value="1">
 
             <div class="space-y-5 p-6">
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -41,13 +42,14 @@
 
                     <div>
                         <label class="text-sm font-medium text-slate-700" for="label">Label</label>
-                        <select id="label" name="label" class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
-                            <option value="none" {{ old('label', 'none') === 'none' ? 'selected' : '' }}>Tanpa Label</option>
-                            <option value="new" {{ old('label') === 'new' ? 'selected' : '' }}>New</option>
-                            <option value="promo" {{ old('label') === 'promo' ? 'selected' : '' }}>Promo</option>
-                            <option value="best_seller" {{ old('label') === 'best_seller' ? 'selected' : '' }}>Best Seller</option>
+                        <select id="label" name="mst_label_id" class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                            @foreach (($labels ?? []) as $lbl)
+                                <option value="{{ $lbl->id }}" {{ (string) old('mst_label_id') === (string) $lbl->id ? 'selected' : '' }}>
+                                    {{ $lbl->name }}
+                                </option>
+                            @endforeach
                         </select>
-                        @error('label')
+                        @error('mst_label_id')
                         <div class="mt-1.5 text-xs text-red-600">{{ $message }}</div>
                         @enderror
                     </div>
@@ -102,6 +104,92 @@
                         @enderror
                     </div>
                 </div>
+            </div>
+
+            @php
+                $variantsInitial = old('variants');
+                if (!is_array($variantsInitial)) {
+                    $variantsInitial = [];
+                }
+            @endphp
+            <div class="border-t border-slate-200 bg-white px-6 py-6"
+                x-data="{
+                    sizes: @js(($sizes ?? [])->map(fn($s) => ['id' => (int) $s->id, 'code' => (string) $s->code])),
+                    variants: @js($variantsInitial),
+                    defaultSizeId() {
+                        const m = (this.sizes || []).find((x) => String(x.code || '').toUpperCase() === 'M');
+                        return m ? Number(m.id) : (this.sizes?.[0]?.id ?? null);
+                    },
+                    addRow() { this.variants.push({ mst_size_id: this.defaultSizeId(), sku: '', color: '', stock: 0, price: '' }); },
+                    removeRow(i) { this.variants.splice(i, 1); },
+                }">
+                <div class="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                        <div class="text-sm font-semibold text-slate-900">Variants &amp; Stock</div>
+                        <div class="mt-1 text-sm text-slate-600">Atur stok per ukuran (opsional).</div>
+                    </div>
+                    <button type="button" class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 active:scale-95 transition-all" @click="addRow()">
+                        Add Size
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <tr>
+                                <th class="py-2 pr-4">Size</th>
+                                <th class="py-2 pr-4">SKU</th>
+                                <th class="py-2 pr-4">Color</th>
+                                <th class="py-2 pr-4">Stock</th>
+                                <th class="py-2 pr-4">Price Override</th>
+                                <th class="py-2">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="(v, i) in variants" :key="i">
+                                <tr>
+                                    <td class="py-3 pr-4 align-top">
+                                        <select class="h-10 w-24 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900" :name="`variants[${i}][mst_size_id]`" x-model.number="v.mst_size_id">
+                                            <template x-for="s in sizes" :key="s.id">
+                                                <option :value="s.id" x-text="s.code"></option>
+                                            </template>
+                                        </select>
+                                    </td>
+                                    <td class="py-3 pr-4 align-top">
+                                        <input type="text" class="h-10 w-44 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900" :name="`variants[${i}][sku]`" x-model="v.sku" placeholder="AV-TSHIRT-M" />
+                                    </td>
+                                    <td class="py-3 pr-4 align-top">
+                                        <input type="text" class="h-10 w-32 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900" :name="`variants[${i}][color]`" x-model="v.color" placeholder="Black" />
+                                    </td>
+                                    <td class="py-3 pr-4 align-top">
+                                        <input type="number" min="0" class="h-10 w-24 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900" :name="`variants[${i}][stock]`" x-model.number="v.stock" />
+                                    </td>
+                                    <td class="py-3 pr-4 align-top">
+                                        <div class="flex overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-900">
+                                            <div class="flex items-center bg-slate-50 px-3 text-sm font-semibold text-slate-700">Rp</div>
+                                            <input type="number" min="0" class="h-10 w-40 border-0 bg-white px-3 text-sm text-slate-900 outline-none" :name="`variants[${i}][price]`" x-model="v.price" placeholder="(optional)" />
+                                        </div>
+                                    </td>
+                                    <td class="py-3 align-top">
+                                        <button type="button" class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50 active:scale-95 transition-all" @click="removeRow(i)">
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                @error('variants.*.mst_size_id')
+                    <div class="mt-3 text-xs text-red-600">{{ $message }}</div>
+                @enderror
+                @error('variants.*.stock')
+                    <div class="mt-3 text-xs text-red-600">{{ $message }}</div>
+                @enderror
+                @error('variants.*.sku')
+                    <div class="mt-3 text-xs text-red-600">{{ $message }}</div>
+                @enderror
             </div>
 
             <div class="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">

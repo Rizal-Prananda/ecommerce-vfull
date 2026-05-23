@@ -19,6 +19,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(SiteSettingsSeeder::class);
+
         if (config('app.env') === 'local') {
             $email = 'test@example.com';
             User::firstOrCreate(
