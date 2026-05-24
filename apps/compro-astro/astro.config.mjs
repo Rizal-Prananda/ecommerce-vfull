@@ -7,8 +7,14 @@ import react from '@astrojs/react';
 
 // https://astro.build/config
 export default defineConfig({
+  security: {
+    checkOrigin: process.env.NODE_ENV === 'production',
+  },
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    server: {
+      allowedHosts: ['.ngrok-free.app'],
+    },
   },
 
   integrations: [react()]

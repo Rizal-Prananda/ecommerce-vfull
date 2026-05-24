@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import OrderCard from "./OrderCard.jsx";
 
@@ -6,7 +6,6 @@ const TABS = [
   { key: "ALL", label: "Semua" },
   { key: "PAID", label: "Paid" },
   { key: "UNPAID", label: "Unpaid" },
-  { key: "SELESAI", label: "Selesai" },
 ];
 
 export default function PesananList({ orders = [] }) {
@@ -15,45 +14,40 @@ export default function PesananList({ orders = [] }) {
   const [data, setData] = useState(Array.isArray(orders) ? orders : []);
 
   // Fetch real orders from server (includes thumbnail from OrderItems / products)
-  useEffect(() => {
-    let cancelled = false;
-
-    const getAuth = () => {
-      try {
-        const token = String(window.localStorage.getItem("token_pelanggan") || "").trim();
-        const pelangganId = String(window.localStorage.getItem("id_pelanggan") || "").trim();
-        const idNum = Number(pelangganId || "0");
-        const id = Number.isFinite(idNum) && idNum > 0 ? String(Math.trunc(idNum)) : "";
-        return { token, id };
-      } catch {
-        return { token: "", id: "" };
-      }
-    };
-
-    const load = async () => {
-      const auth = getAuth();
-      if (!auth.id && !auth.token) return;
-
-      const res = await fetch("/api/orders", {
-        method: "GET",
-        headers: {
-          ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
-          ...(auth.id ? { "X-Pelanggan-Id": auth.id } : {}),
-        },
-      }).catch(() => null);
-
-      const json = res ? await res.json().catch(() => null) : null;
-      if (!res || !res.ok || !json?.ok) return;
-
-      const list = Array.isArray(json?.data) ? json.data : [];
-      if (!cancelled) setData(list);
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
+  const getAuth = useCallback(() => {
+    try {
+      const token = String(window.localStorage.getItem("token_pelanggan") || "").trim();
+      const pelangganId = String(window.localStorage.getItem("id_pelanggan") || "").trim();
+      const idNum = Number(pelangganId || "0");
+      const id = Number.isFinite(idNum) && idNum > 0 ? String(Math.trunc(idNum)) : "";
+      return { token, id };
+    } catch {
+      return { token: "", id: "" };
+    }
   }, []);
+
+  const reloadOrders = useCallback(async () => {
+    const auth = getAuth();
+    if (!auth.id && !auth.token) return;
+
+    const res = await fetch("/api/orders", {
+      method: "GET",
+      headers: {
+        ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+        ...(auth.id ? { "X-Pelanggan-Id": auth.id } : {}),
+      },
+    }).catch(() => null);
+
+    const json = res ? await res.json().catch(() => null) : null;
+    if (!res || !res.ok || !json?.ok) return;
+
+    const list = Array.isArray(json?.data) ? json.data : [];
+    setData(list);
+  }, [getAuth]);
+
+  useEffect(() => {
+    void reloadOrders();
+  }, [reloadOrders]);
 
   // Filter logic: tab status + search by order id / items
   const filtered = useMemo(() => {
@@ -63,9 +57,16 @@ export default function PesananList({ orders = [] }) {
     return list.filter((o) => {
       const status = String(o?.status || "").toUpperCase();
       const matchesTab = activeTab === "ALL" ? true : status === activeTab;
-      const matchesSearch = q
-        ? String(o?.id || "").toLowerCase().includes(q) || String(o?.items || "").toLowerCase().includes(q)
-        : true;
+      const itemsText = (() => {
+        if (Array.isArray(o?.items)) {
+          return o.items
+            .map((it) => `${String(it?.name || "")} ${String(it?.variant || "")}`.trim())
+            .filter(Boolean)
+            .join(" ");
+        }
+        return String(o?.items_text || o?.items || "");
+      })();
+      const matchesSearch = q ? String(o?.id || "").toLowerCase().includes(q) || itemsText.toLowerCase().includes(q) : true;
       return matchesTab && matchesSearch;
     });
   }, [data, activeTab, search]);
@@ -129,7 +130,7 @@ export default function PesananList({ orders = [] }) {
             <div className="mt-1 text-sm text-zinc-500">Coba ganti filter atau cari no. order lain.</div>
           </div>
         ) : (
-          filtered.map((o) => <OrderCard key={o.id} order={o} />)
+          filtered.map((o) => <OrderCard key={o.id} order={o} onOrderUpdate={reloadOrders} />)
         )}
       </div>
     </div>

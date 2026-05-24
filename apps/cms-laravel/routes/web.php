@@ -43,12 +43,12 @@ Route::get('/', function () {
 
 Route::get('/product-media/{path}', function (string $path) {
     $path = ltrim($path, '/');
-    if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'products/')) {
+    if ($path === '' || str_contains($path, '..') || !(str_starts_with($path, 'products/') || str_starts_with($path, 'banners/'))) {
         abort(404);
     }
 
     $ext = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
-    if (!in_array($ext, ['webp', 'svg'], true)) {
+    if (!in_array($ext, ['webp', 'svg', 'jpg', 'jpeg'], true)) {
         abort(404);
     }
 

@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import Navbar from '../components/Navbar.astro';
 import FloatingChat from '../components/FloatingChat';
+import { Toaster } from 'sonner';
 
 type Props = {
 	title?: string;
@@ -24,6 +25,7 @@ const { title = 'E-Commerce', navbarVariant = 'default' } = Astro.props;
 	<body class="min-h-full">
 		<Navbar variant={navbarVariant} />
 		<slot />
+		<Toaster richColors position="top-right" client:load />
 		<FloatingChat client:load />
 	</body>
 </html>

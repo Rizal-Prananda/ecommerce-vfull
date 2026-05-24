@@ -45,7 +45,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 				<section x-show="items.length > 0" class="lg:col-span-2">
 					<div class="rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm">
 						<div class="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 border-b border-zinc-100 pb-3 text-sm font-medium text-zinc-500">
-							<div>Product Code</div>
+							<div>Produk</div>
 							<div class="text-center">Quantity</div>
 							<div class="text-right">Total</div>
 							<div class="text-right">Action</div>
@@ -62,17 +62,17 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 											loading="lazy"
 										/>
 										<div class="min-w-0">
-											<div class="text-sm font-semibold text-zinc-900" x-text="formatCode(it)"></div>
 											<div class="mt-0.5 truncate text-sm font-medium text-zinc-900" x-text="it.title || `Produk #${it.product_id}`"></div>
-											<div class="mt-0.5 text-sm text-zinc-500" x-text="it.size || ''"></div>
+											<div class="mt-0.5 text-sm text-zinc-500" x-text="it.size ? `Ukuran : ${it.size}` : ''"></div>
 										</div>
 									</div>
 
 									<div class="flex items-center justify-center gap-2">
 										<button
 											type="button"
-											class="grid h-8 w-8 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 active:scale-95"
+											class="grid h-8 w-8 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 											@click="updateQty(keyOf(it), -1)"
+											:disabled="Number(it.qty || 1) <= 1"
 											aria-label="Kurangi"
 										>
 											<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -82,8 +82,9 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 										<div class="w-8 text-center text-sm font-semibold tabular-nums text-zinc-900" x-text="it.qty"></div>
 										<button
 											type="button"
-											class="grid h-8 w-8 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 active:scale-95"
+											class="grid h-8 w-8 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 											@click="updateQty(keyOf(it), 1)"
+											:disabled="Number(it.stock || 0) <= 0 || Number(it.qty || 0) >= Number(it.stock || 0)"
 											aria-label="Tambah"
 										>
 											<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -174,19 +175,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 	<script is:inline define:vars={{ CMS_URL }}>
 		window.cartPage = function cartPage() {
 			const KEY = 'cart_items';
-			const resolveCmsBase = () => {
-				const raw = String(CMS_URL || '').trim().replace(/\/$/, '');
-				if (!raw) return '';
-				try {
-					const u = new URL(raw);
-					const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
-					if (isLoopback) u.hostname = window.location.hostname;
-					return u.origin;
-				} catch {
-					return raw;
-				}
-			};
-			const CMS_BASE = resolveCmsBase();
+			const CMS_BASE = '/cms';
 
 			return {
 				KEY,
@@ -218,11 +207,27 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 						const rawVariantId = it?.variant_id ?? it?.variantId ?? null;
 						const variantId = rawVariantId === null || rawVariantId === undefined ? null : Number(rawVariantId);
 						const qty = Math.max(1, Math.trunc(Number(it?.qty ?? 1)));
+						const stockRaw = Number(it?.stock ?? it?.available_stock ?? 0);
+						const stock = Number.isFinite(stockRaw) ? Math.max(0, Math.trunc(stockRaw)) : 0;
 
 						const title = String(it?.title ?? it?.name ?? '').trim();
 						const image = String(it?.image ?? it?.image_url ?? '').trim();
 						const price = Number(it?.price ?? 0);
 						const size = String(it?.size ?? it?.variant ?? it?.variant_label ?? '').trim();
+
+						if (stock > 0 && qty > stock) {
+							out.push({
+								product_id: productId,
+								variant_id: Number.isFinite(variantId) && variantId > 0 ? variantId : null,
+								qty: stock,
+								title,
+								image,
+								price: Number.isFinite(price) ? Math.max(0, Math.trunc(price)) : 0,
+								size,
+								stock,
+							});
+							continue;
+						}
 
 						out.push({
 							product_id: productId,
@@ -232,6 +237,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 							image,
 							price: Number.isFinite(price) ? Math.max(0, Math.trunc(price)) : 0,
 							size,
+							stock,
 						});
 					}
 					return out;
@@ -280,6 +286,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
+							Accept: 'application/json',
 							...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
 							...(auth.id ? { 'X-Pelanggan-Id': auth.id } : {}),
 						},
@@ -293,6 +300,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 					const res = await fetch(`${CMS_BASE}/api/cart`, {
 						method: 'GET',
 						headers: {
+							Accept: 'application/json',
 							...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
 							...(auth.id ? { 'X-Pelanggan-Id': auth.id } : {}),
 						},
@@ -314,13 +322,6 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 				},
 				keyOf(it) {
 					return `${String(it.product_id)}:${it.variant_id === null ? 'null' : String(it.variant_id)}`;
-				},
-				formatCode(it) {
-					const p = Number(it?.product_id ?? 0);
-					const v = it?.variant_id === null || it?.variant_id === undefined ? null : Number(it.variant_id);
-					if (Number.isFinite(v) && v > 0) return `PV-${v}`;
-					if (Number.isFinite(p) && p > 0) return `P-${p}`;
-					return '—';
 				},
 				get totalItems() {
 					return this.countQty(this.items);
@@ -358,8 +359,50 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 					const idx = this.items.findIndex((x) => this.keyOf(x) === cartKey);
 					if (idx < 0) return;
 					const cur = Math.max(1, Math.trunc(Number(this.items[idx]?.qty ?? 1)));
-					const nextQty = Math.max(1, cur + Math.trunc(Number(delta || 0)));
+					const d = Math.trunc(Number(delta || 0));
+					const stock = Math.max(0, Math.trunc(Number(this.items[idx]?.stock ?? 0)));
+					let nextQty = Math.max(1, cur + d);
+					if (stock > 0) nextQty = Math.max(1, Math.min(stock, nextQty));
 					this.items = this.items.map((x, i) => (i === idx ? { ...x, qty: nextQty } : x));
+					this.persist();
+				},
+				async hydrateStock() {
+					if (!Array.isArray(this.items) || this.items.length === 0) return;
+					const payload = {
+						items: this.items.map((it) => ({
+							product_id: Number(it?.product_id ?? 0),
+							variant_id: it?.variant_id === null || it?.variant_id === undefined ? null : Number(it.variant_id),
+						})),
+					};
+
+					const res = await fetch('/cms/api/cart/stock', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+						body: JSON.stringify(payload),
+					}).catch(() => null);
+					if (!res || !('ok' in res) || !res.ok) return;
+					const json = await res.json().catch(() => null);
+					const rows = Array.isArray(json?.data?.items) ? json.data.items : [];
+
+					const key = (productId, variantId) => `${Number(productId || 0)}:${variantId === null || variantId === undefined ? '' : Number(variantId)}`;
+					const map = new Map();
+					for (const r of rows) {
+						const productId = Number(r?.product_id ?? 0);
+						const rawVariantId = r?.variant_id;
+						const variantId = rawVariantId === null || rawVariantId === undefined ? null : Number(rawVariantId);
+						const stock = Math.max(0, Math.trunc(Number(r?.stock ?? 0)));
+						map.set(key(productId, variantId), stock);
+					}
+
+					this.items = this.items.map((it) => {
+						const productId = Number(it?.product_id ?? 0);
+						const rawVariantId = it?.variant_id;
+						const variantId = rawVariantId === null || rawVariantId === undefined ? null : Number(rawVariantId);
+						const stock = map.has(key(productId, variantId)) ? map.get(key(productId, variantId)) : Number(it?.stock ?? 0);
+						const qtyIn = Math.max(1, Math.trunc(Number(it?.qty ?? 1)));
+						const qty = stock > 0 ? Math.min(stock, qtyIn) : qtyIn;
+						return { ...it, stock, qty };
+					});
 					this.persist();
 				},
 				removeItem(cartKey) {
@@ -427,6 +470,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 						if (e.key === KEY) self.load();
 					});
 					void self.loadFromServer();
+					void self.hydrateStock();
 				},
 			};
 		};

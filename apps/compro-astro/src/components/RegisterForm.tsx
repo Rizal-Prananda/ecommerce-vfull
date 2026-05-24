@@ -12,7 +12,7 @@ export default function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const CMS_REGISTER_URL = useMemo(() => "http://localhost:8001/api/register", []);
+  const CMS_REGISTER_URL = useMemo(() => "/cms/api/register", []);
 
   const submit = async () => {
     setErrorMessage(null);

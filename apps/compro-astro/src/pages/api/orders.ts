@@ -30,42 +30,52 @@ export const GET: APIRoute = async ({ request }) => {
       return new Response(body, { status: res.status, headers: { "Content-Type": "application/json" } });
     }
 
-    const cmsOrigin = (() => {
-      try {
-        return new URL(String(CMS_URL)).origin;
-      } catch {
-        return String(CMS_URL).replace(/\/$/, "");
-      }
-    })();
-
     const normalizeThumb = (raw: unknown) => {
       const v = String(raw ?? "").trim();
       if (!v) return v;
 
+      const toProxy = (pathAndQuery: string) => {
+        const cleaned = String(pathAndQuery || "").trim();
+        if (!cleaned) return cleaned;
+        if (cleaned === "/cms" || cleaned.startsWith("/cms/")) return cleaned;
+        if (cleaned === "cms" || cleaned.startsWith("cms/")) return `/${cleaned}`;
+        return cleaned.startsWith("/") ? `/cms${cleaned}` : `/cms/${cleaned}`;
+      };
+
       if (v.startsWith("http://") || v.startsWith("https://")) {
         try {
           const u = new URL(v);
-          const cms = new URL(cmsOrigin);
+          const cms = new URL(String(CMS_URL));
+          const sameHost = u.hostname === cms.hostname && String(u.port || "") === String(cms.port || "");
           const isLoopback = u.hostname === "localhost" || u.hostname === "127.0.0.1";
           const cmsLoopback = cms.hostname === "localhost" || cms.hostname === "127.0.0.1";
-          if (isLoopback && cmsLoopback) u.hostname = cms.hostname;
-          if (u.port && cms.port) u.port = cms.port;
-          return u.toString();
+          if (sameHost || (isLoopback && cmsLoopback)) {
+            return toProxy(`${u.pathname}${u.search}`);
+          }
+          return v;
         } catch {
           return v;
         }
       }
 
-      if (v.startsWith("products/")) return `${cmsOrigin}/product-media/${v}`;
-      if (v.startsWith("/product-media/")) return `${cmsOrigin}${v}`;
-      if (v.startsWith("/")) return `${cmsOrigin}${v}`;
-      return `${cmsOrigin}/${v}`;
+      if (v.startsWith("products/")) return toProxy(`/product-media/${v}`);
+      if (v.startsWith("/product-media/")) return toProxy(v);
+      if (v.startsWith("/storage/")) return toProxy(v);
+      if (v.startsWith("/uploads/")) return toProxy(v);
+      if (v.startsWith("/")) return toProxy(v);
+      return toProxy(v);
     };
 
     if (Array.isArray((payload as any)?.data)) {
       (payload as any).data = (payload as any).data.map((o: any) => ({
         ...o,
         thumbnail: normalizeThumb(o?.thumbnail),
+        items: Array.isArray(o?.items)
+          ? o.items.map((it: any) => ({
+              ...it,
+              thumbnail: normalizeThumb(it?.thumbnail),
+            }))
+          : o?.items,
       }));
     }
 

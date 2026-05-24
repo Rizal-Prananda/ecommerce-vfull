@@ -241,6 +241,17 @@ Route::get('/orders', function (Request $request) {
     }
 
     $base = $request->getSchemeAndHttpHost();
+    $generateOrderNo = function (string $datePart) use ($conn): string {
+        $datePart = preg_replace('/[^0-9]/', '', $datePart) ?: now()->format('Ymd');
+        $tries = 0;
+        while (true) {
+            $candidate = 'ORD-' . $datePart . '-' . random_int(100000000, 999999999);
+            $exists = $conn->table('Orders')->where('order_no', $candidate)->exists();
+            if (!$exists) return $candidate;
+            $tries++;
+            if ($tries >= 10) return $candidate;
+        }
+    };
 
     $orders = $conn->table('Orders')
         ->where('id_pelanggan', $id)
@@ -279,8 +290,12 @@ Route::get('/orders', function (Request $request) {
             ->get([
                 'id_order',
                 'product_id',
+                'variant_id',
+                'qty',
                 'title',
                 'image',
+                'unit_price',
+                'size',
             ]);
 
         foreach ($items as $it) {
@@ -365,29 +380,87 @@ Route::get('/orders', function (Request $request) {
         return $base . '/' . $v;
     };
 
+    $hasVariants = $schema->hasTable('product_variants');
+    $variantSkuMap = [];
+    if ($hasVariants && count($orderIds)) {
+        $variantIds = [];
+        foreach ($itemsByOrder as $arr) {
+            foreach ($arr as $it) {
+                $variantId = $it->variant_id === null ? null : (int) ($it->variant_id ?? 0);
+                if ($variantId !== null && $variantId > 0) {
+                    $variantIds[$variantId] = true;
+                }
+            }
+        }
+        $variantIds = array_keys($variantIds);
+        if (count($variantIds)) {
+            $variantSkuMap = $conn->table('product_variants')->whereIn('id', $variantIds)->pluck('sku', 'id')->all();
+        }
+    }
+
     $out = [];
     foreach ($orders as $o) {
         $oid = (int) ($o->id_order ?? 0);
         $status = strtoupper(trim((string) ($o->status ?? '')));
         $createdAt = trim((string) ($o->createdAt ?? ''));
         $orderNo = trim((string) ($o->order_no ?? ''));
+        if ($orderNo === '' && $oid > 0) {
+            $datePart = '';
+            try {
+                $datePart = \Carbon\Carbon::parse($createdAt)->format('Ymd');
+            } catch (\Throwable $e) {
+                $datePart = now()->format('Ymd');
+            }
+            $orderNo = $generateOrderNo($datePart);
+            $conn->table('Orders')->where('id_order', $oid)->whereNull('order_no')->update(['order_no' => $orderNo]);
+        }
         $orderId = $orderNo !== '' ? $orderNo : ('#' . $oid);
 
         $itRows = $itemsByOrder[$oid] ?? [];
-        $titles = [];
+        $grouped = [];
+        $itemsOut = [];
         $thumb = '';
         $firstProductId = 0;
 
         foreach ($itRows as $idx => $it) {
-            $t = trim((string) ($it->title ?? ''));
-            if ($t !== '' && count($titles) < 2) {
-                $titles[] = $t;
+            $productId = (int) ($it->product_id ?? 0);
+            $variantId = $it->variant_id === null ? null : (int) ($it->variant_id ?? 0);
+            $qty = max(1, (int) ($it->qty ?? 1));
+            $unitPrice = max(0, (int) ($it->unit_price ?? 0));
+            $size = trim((string) ($it->size ?? ''));
+
+            $sku = '';
+            if ($variantId !== null && $variantId > 0) {
+                $sku = trim((string) ($variantSkuMap[$variantId] ?? ''));
             }
+            $name = trim((string) ($it->title ?? ''));
+            if ($name === '') $name = $productId > 0 ? ('Produk #' . $productId) : 'Produk';
+            $variantLabel = $sku !== '' ? $sku : $size;
+
+            $key = ($variantId !== null && $variantId > 0) ? ('v:' . $variantId) : ('p:' . $productId);
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'id' => $variantId !== null && $variantId > 0 ? $variantId : $productId,
+                    'product_id' => $productId,
+                    'variant_id' => $variantId,
+                    'name' => $name,
+                    'variant' => $variantLabel,
+                    'qty' => 0,
+                    'subtotal' => 0,
+                    'thumbnail' => '',
+                ];
+            }
+            $grouped[$key]['qty'] += $qty;
+            $grouped[$key]['subtotal'] += ($unitPrice * $qty);
+
             $img = trim((string) ($it->image ?? ''));
             $pid = (int) ($it->product_id ?? 0);
             if ($idx === 0 && $pid > 0) $firstProductId = $pid;
             if ($thumb === '' && $img !== '') {
                 $thumb = $img;
+            }
+            if ($grouped[$key]['thumbnail'] === '' && $img !== '') {
+                $grouped[$key]['thumbnail'] = $img;
             }
         }
 
@@ -397,7 +470,33 @@ Route::get('/orders', function (Request $request) {
 
         $thumb = $resolveThumb((string) $thumb);
 
-        $itemsStr = implode(', ', $titles);
+        foreach ($grouped as $g) {
+            $productId = (int) ($g['product_id'] ?? 0);
+            $img = trim((string) ($g['thumbnail'] ?? ''));
+            if ($img === '' && $productId > 0) {
+                $img = (string) ($productImageMap[$productId] ?? '');
+            }
+            $itemsOut[] = [
+                'id' => (int) ($g['id'] ?? 0),
+                'name' => (string) ($g['name'] ?? ''),
+                'variant' => (string) ($g['variant'] ?? ''),
+                'qty' => (int) max(1, (int) ($g['qty'] ?? 1)),
+                'subtotal' => (int) max(0, (int) ($g['subtotal'] ?? 0)),
+                'thumbnail' => $resolveThumb((string) $img),
+            ];
+        }
+
+        $itemsTextParts = [];
+        foreach (array_slice($itemsOut, 0, 2) as $it) {
+            $name = trim((string) ($it['name'] ?? ''));
+            $variant = trim((string) ($it['variant'] ?? ''));
+            $qty = (int) ($it['qty'] ?? 1);
+            $itemsTextParts[] = trim($name . ($variant !== '' ? (' ' . $variant) : '') . ': ' . $qty . 'x');
+        }
+        $itemsText = implode(', ', $itemsTextParts);
+        if (count($itemsOut) > 2) {
+            $itemsText = trim($itemsText . ' +' . (count($itemsOut) - 2) . ' lainnya');
+        }
 
         $dueDate = null;
         if ($status === 'UNPAID' && $createdAt !== '') {
@@ -413,7 +512,8 @@ Route::get('/orders', function (Request $request) {
         $out[] = [
             'id' => $orderId,
             'date' => $createdAt,
-            'items' => $itemsStr,
+            'items' => $itemsOut,
+            'items_text' => $itemsText,
             'total' => (int) ($o->total ?? 0),
             'status' => $status ?: 'UNPAID',
             'dueDate' => $dueDate,
@@ -488,13 +588,57 @@ Route::get('/cart', function (Request $request) {
             'size',
         ]);
 
+    $productIds = [];
+    $variantIds = [];
+    foreach ($rows as $r) {
+        $productId = (int) ($r->product_id ?? 0);
+        if ($productId > 0) {
+            $productIds[] = $productId;
+        }
+        $variantId = $r->variant_id === null ? null : (int) $r->variant_id;
+        if ($variantId !== null && $variantId > 0) {
+            $variantIds[] = $variantId;
+        }
+    }
+    $productIds = array_values(array_unique($productIds));
+    $variantIds = array_values(array_unique($variantIds));
+
+    $productStockMap = [];
+    if (count($productIds)) {
+        $productStockMap = $conn->table('products')->whereIn('id', $productIds)->pluck('stock', 'id')->all();
+    }
+
+    $variantStockMap = [];
+    $variantProductMap = [];
+    if (count($variantIds)) {
+        $variantStockMap = $conn->table('product_variants')->whereIn('id', $variantIds)->pluck('stock', 'id')->all();
+        $variantProductMap = $conn->table('product_variants')->whereIn('id', $variantIds)->pluck('product_id', 'id')->all();
+    }
+
     $items = [];
     $subtotal = 0;
     foreach ($rows as $r) {
         $productId = (int) ($r->product_id ?? 0);
         $variantId = $r->variant_id === null ? null : (int) $r->variant_id;
-        $qty = max(1, (int) ($r->qty ?? 1));
+        $qtyIn = max(1, (int) ($r->qty ?? 1));
         $price = max(0, (int) ($r->unit_price ?? 0));
+
+        $available = 0;
+        if ($variantId !== null) {
+            $owner = (int) ($variantProductMap[$variantId] ?? 0);
+            if ($owner !== $productId) {
+                continue;
+            }
+            $available = (int) ($variantStockMap[$variantId] ?? 0);
+        } else {
+            $available = (int) ($productStockMap[$productId] ?? 0);
+        }
+
+        if ($available <= 0) {
+            continue;
+        }
+
+        $qty = max(1, min($available, $qtyIn));
         $line = $price * $qty;
         $subtotal += $line;
 
@@ -506,6 +650,7 @@ Route::get('/cart', function (Request $request) {
             'image' => (string) ($r->image ?? ''),
             'price' => $price,
             'size' => (string) ($r->size ?? ''),
+            'stock' => (int) max(0, $available),
         ];
     }
 
@@ -524,6 +669,80 @@ Route::get('/cart', function (Request $request) {
             'delivery_fee' => (int) $deliveryFee,
             'total' => (int) $total,
             'items' => $items,
+        ],
+    ]);
+});
+
+Route::post('/cart/stock', function (Request $request) {
+    $validated = $request->validate([
+        'items' => ['required', 'array'],
+        'items.*.product_id' => ['required', 'integer', 'min:1'],
+        'items.*.variant_id' => ['nullable', 'integer', 'min:1'],
+    ]);
+
+    $itemsIn = (array) ($validated['items'] ?? []);
+    $conn = DB::connection('sqlite');
+
+    $productIds = [];
+    $variantIds = [];
+    foreach ($itemsIn as $it) {
+        $productId = (int) ($it['product_id'] ?? 0);
+        if ($productId > 0) {
+            $productIds[] = $productId;
+        }
+        $variantId = $it['variant_id'] ?? null;
+        if ($variantId !== null) {
+            $variantId = (int) $variantId;
+            if ($variantId > 0) {
+                $variantIds[] = $variantId;
+            }
+        }
+    }
+
+    $productIds = array_values(array_unique($productIds));
+    $variantIds = array_values(array_unique($variantIds));
+
+    $productStockMap = [];
+    if (count($productIds)) {
+        $productStockMap = $conn->table('products')->whereIn('id', $productIds)->pluck('stock', 'id')->all();
+    }
+
+    $variantStockMap = [];
+    $variantProductMap = [];
+    if (count($variantIds)) {
+        $variantStockMap = $conn->table('product_variants')->whereIn('id', $variantIds)->pluck('stock', 'id')->all();
+        $variantProductMap = $conn->table('product_variants')->whereIn('id', $variantIds)->pluck('product_id', 'id')->all();
+    }
+
+    $out = [];
+    foreach ($itemsIn as $it) {
+        $productId = (int) ($it['product_id'] ?? 0);
+        $variantId = $it['variant_id'] ?? null;
+        $variantId = $variantId === null ? null : (int) $variantId;
+
+        $available = 0;
+        if ($variantId !== null) {
+            $owner = (int) ($variantProductMap[$variantId] ?? 0);
+            if ($owner !== $productId) {
+                $available = 0;
+            } else {
+                $available = (int) ($variantStockMap[$variantId] ?? 0);
+            }
+        } else {
+            $available = (int) ($productStockMap[$productId] ?? 0);
+        }
+
+        $out[] = [
+            'product_id' => $productId,
+            'variant_id' => $variantId,
+            'stock' => (int) max(0, $available),
+        ];
+    }
+
+    return response()->json([
+        'ok' => true,
+        'data' => [
+            'items' => $out,
         ],
     ]);
 });
@@ -572,6 +791,18 @@ Route::post('/cart/sync', function (Request $request) {
     }
 
     $out = $conn->transaction(function () use ($conn, $id, $itemsIn, $now) {
+        $generateOrderNo = function (string $datePart) use ($conn): string {
+            $datePart = preg_replace('/[^0-9]/', '', $datePart) ?: now()->format('Ymd');
+            $tries = 0;
+            while (true) {
+                $candidate = 'ORD-' . $datePart . '-' . random_int(100000000, 999999999);
+                $exists = $conn->table('Orders')->where('order_no', $candidate)->exists();
+                if (!$exists) return $candidate;
+                $tries++;
+                if ($tries >= 10) return $candidate;
+            }
+        };
+
         $order = $conn->table('Orders')
             ->where('id_pelanggan', $id)
             ->where('status', 'UNPAID')
@@ -579,28 +810,89 @@ Route::post('/cart/sync', function (Request $request) {
             ->first();
 
         if (!$order) {
+            $orderNo = $generateOrderNo(now()->format('Ymd'));
             $orderId = (int) $conn->table('Orders')->insertGetId([
                 'id_pelanggan' => $id,
-                'order_no' => null,
+                'order_no' => $orderNo,
                 'status' => 'UNPAID',
                 'total' => 0,
                 'createdAt' => $now,
             ], 'id_order');
 
-            $order = (object) ['id_order' => $orderId, 'id_pelanggan' => $id, 'status' => 'UNPAID'];
+            $order = (object) ['id_order' => $orderId, 'id_pelanggan' => $id, 'status' => 'UNPAID', 'order_no' => $orderNo];
         }
 
         $orderId = (int) $order->id_order;
+        $existingNo = trim((string) ($order->order_no ?? ''));
+        if ($existingNo === '') {
+            $newNo = $generateOrderNo(now()->format('Ymd'));
+            $conn->table('Orders')->where('id_order', $orderId)->whereNull('order_no')->update(['order_no' => $newNo]);
+            $order->order_no = $newNo;
+        }
 
         $conn->table('OrderItems')->where('id_order', $orderId)->delete();
+        if (count($itemsIn) === 0) {
+            $conn->table('Orders')->where('id_order', $orderId)->where('status', 'UNPAID')->delete();
+            return [
+                'id_order' => null,
+                'order_no' => null,
+                'status' => 'UNPAID',
+                'subtotal' => 0,
+                'discount' => 0,
+                'delivery_fee' => 0,
+                'total' => 0,
+                'items' => [],
+            ];
+        }
+
+        $productIds = [];
+        $variantIds = [];
+        foreach ($itemsIn as $it) {
+            $productId = (int) ($it['product_id'] ?? 0);
+            if ($productId > 0) {
+                $productIds[] = $productId;
+            }
+            $variantId = $it['variant_id'] === null ? null : (int) ($it['variant_id'] ?? 0);
+            if ($variantId !== null && $variantId > 0) {
+                $variantIds[] = $variantId;
+            }
+        }
+        $productIds = array_values(array_unique($productIds));
+        $variantIds = array_values(array_unique($variantIds));
+
+        $productStockMap = [];
+        if (count($productIds)) {
+            $productStockMap = $conn->table('products')->whereIn('id', $productIds)->pluck('stock', 'id')->all();
+        }
+
+        $variantStockMap = [];
+        $variantProductMap = [];
+        if (count($variantIds)) {
+            $variantStockMap = $conn->table('product_variants')->whereIn('id', $variantIds)->pluck('stock', 'id')->all();
+            $variantProductMap = $conn->table('product_variants')->whereIn('id', $variantIds)->pluck('product_id', 'id')->all();
+        }
 
         $rows = [];
         $subtotal = 0;
         foreach ($itemsIn as $it) {
             $productId = (int) ($it['product_id'] ?? 0);
             $variantId = $it['variant_id'] === null ? null : (int) ($it['variant_id'] ?? 0);
-            $qty = max(1, (int) ($it['qty'] ?? 1));
+            $qtyIn = max(1, (int) ($it['qty'] ?? 1));
             $price = max(0, (int) ($it['price'] ?? 0));
+            $available = 0;
+            if ($variantId !== null) {
+                $owner = (int) ($variantProductMap[$variantId] ?? 0);
+                if ($owner !== $productId) {
+                    continue;
+                }
+                $available = (int) ($variantStockMap[$variantId] ?? 0);
+            } else {
+                $available = (int) ($productStockMap[$productId] ?? 0);
+            }
+            if ($available <= 0) {
+                continue;
+            }
+            $qty = max(1, min($available, $qtyIn));
             $line = $price * $qty;
             $subtotal += $line;
 

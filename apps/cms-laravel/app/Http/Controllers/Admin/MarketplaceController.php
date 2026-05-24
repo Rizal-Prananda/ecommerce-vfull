@@ -106,14 +106,14 @@ class MarketplaceController extends Controller
 
         if ($desktop) {
             $path = $desktop->store('banners', 'public');
-            $publicUrl = '/storage/' . ltrim($path, '/');
+            $publicUrl = '/product-media/' . ltrim($path, '/');
             SiteSetting::query()->updateOrCreate(['key' => 'marketplace_hero_banner'], $makeValues($publicUrl));
             SiteSetting::query()->updateOrCreate(['key' => 'hero_banner'], $makeValues($publicUrl));
         }
 
         if ($mobile) {
             $path = $mobile->store('banners', 'public');
-            $publicUrl = '/storage/' . ltrim($path, '/');
+            $publicUrl = '/product-media/' . ltrim($path, '/');
             SiteSetting::query()->updateOrCreate(['key' => 'marketplace_hero_banner_mobile'], $makeValues($publicUrl));
         }
 

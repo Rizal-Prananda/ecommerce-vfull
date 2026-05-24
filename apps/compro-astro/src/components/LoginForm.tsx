@@ -7,7 +7,7 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const CMS_LOGIN_URL = useMemo(() => "http://localhost:8001/api/login", []);
+  const CMS_LOGIN_URL = useMemo(() => "/cms/api/login", []);
 
   const submit = async () => {
     setLoading(true);

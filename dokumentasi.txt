@@ -243,3 +243,121 @@ E) /marketplace kosong / error ambil produk
    - Pastikan CMS jalan di PUBLIC_CMS_URL (default: http://127.0.0.1:8001)
    - Cek endpoint:
      http://127.0.0.1:8001/api/products
+
+
+7) Ngrok (Akses dari HP / Device Luar)
+-------------------------------------
+Tujuan: supaya website bisa diakses dari luar jaringan lokal tanpa deploy.
+
+7.1 Install ngrok
+1) Download:
+   https://ngrok.com/download
+2) Extract (contoh):
+   C:\ngrok
+3) Tambah PATH:
+   System Properties -> Environment Variables -> Path -> tambah: C:\ngrok
+4) Login / set authtoken:
+   ngrok config add-authtoken <TOKEN_KAMU>
+5) Cek:
+   ngrok version
+
+7.2 Jalankan CMS + Astro (lokal)
+Terminal A (CMS Laravel):
+   cd C:\Projects\E-commerceV2\apps\cms-laravel
+   php artisan serve --host=0.0.0.0 --port=8001
+
+Terminal B (Astro):
+   cd C:\Projects\E-commerceV2\apps\compro-astro
+   npm run dev -- --host 0.0.0.0 --port 4321
+
+7.3 Buka akses via ngrok
+Opsi A (umumnya cukup, rekomendasi): expose Astro saja (port 4321)
+   ngrok http 4321
+Lalu buka URL https://xxxx.ngrok-free.app
+
+Opsi B (kalau butuh akses CMS dari luar juga): expose CMS (port 8001) + Astro
+   ngrok http 8001
+   ngrok http 4321
+
+Catatan penting:
+- Frontend sudah punya proxy /cms/* (lihat bagian 8) jadi device luar tidak perlu akses langsung ke CMS.
+- Jika pakai Opsi A (expose Astro saja), CMS tetap jalan lokal (127.0.0.1:8001) di mesin yang sama.
+
+
+8) Proxy CMS lewat Astro (/cms/*)
+--------------------------------
+Kenapa perlu:
+- Saat akses dari luar (ngrok), browser device luar tidak bisa akses http://127.0.0.1:8001 (itu localhost milik device tsb).
+- Solusi: semua request API/media ke CMS lewat Astro route: /cms/...
+
+Contoh yang dipakai:
+- API CMS:
+  /cms/api/login
+  /cms/api/register
+  /cms/api/cart
+  /cms/api/cart/sync
+  /cms/api/cart/stock
+  /cms/api/orders
+- Media:
+  /cms/product-media/...
+  /cms/storage/...
+  /cms/uploads/...
+
+Kalau ada URL thumbnail/media dari CMS yang masih mengarah ke /storage/... atau host CMS langsung,
+normalisasi agar lewat /cms/... supaya aman di ngrok.
+
+
+9) Catatan Konfigurasi (Ngrok + Dev Server)
+------------------------------------------
+A) Host ngrok diblok oleh Vite (Astro)
+- Gejala: "Blocked request. This host is not allowed..."
+- Solusi: whitelist host ngrok di astro.config.mjs (allowedHosts untuk *.ngrok-free.app).
+
+B) POST via ngrok kena 403 di mode dev
+- Gejala: POST /api/... via ngrok -> 403 Forbidden
+- Solusi: di dev, origin check dimatikan. Di production tetap aktif.
+
+
+10) Upload File / Banner tidak ikut Git
+--------------------------------------
+Catatan:
+- File upload CMS biasanya tersimpan di:
+  apps/cms-laravel/storage/app/public/...
+- Folder storage ini tidak ikut git, jadi setelah pull di mesin baru file upload tidak otomatis ada.
+
+Solusi yang umum:
+1) Buat symlink public storage:
+   cd apps/cms-laravel
+   php artisan storage:link
+2) Pastikan file upload memang ada di server/PC tersebut (copy manual / backup / cloud storage).
+
+
+11) Rules Fitur (Stock, Cart, Order)
+-----------------------------------
+A) Stock enforcement
+- Add to Cart: jika stock 0 -> button Sold Out / disable.
+- Keranjang: qty tidak bisa melebihi stock (clamp di client + divalidasi di server).
+- Saat order PAID: stock akan berkurang di tabel products / product_variants.
+
+B) Cancel order
+- Endpoint: POST /api/order/{order_no}/cancel
+- Hanya bisa cancel jika status masih UNPAID.
+- Setelah cancel: cart localStorage dibersihkan dan server cart disinkronkan kosong supaya tidak muncul lagi.
+
+
+12) Dependency Tambahan (Frontend Astro)
+---------------------------------------
+- sonner (toast notification)
+  Install:
+    cd apps/compro-astro
+    npm install
+
+- better-sqlite3 (database API server Astro)
+  Install:
+    cd apps/compro-astro
+    npm install
+
+
+
+npm install better-sqlite3
+di compro astro 

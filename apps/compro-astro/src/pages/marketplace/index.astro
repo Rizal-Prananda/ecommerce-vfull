@@ -39,6 +39,35 @@ let products: Product[] = [];
 let heroDesktopSrc = '/images/default-hero.webp';
 let heroMobileSrc = '/images/default-hero.webp';
 
+const resolveCmsAssetUrl = (cmsBaseUrl: string, raw: string, fallback: string) => {
+	const base = String(cmsBaseUrl).replace(/\/$/, '');
+	const cmsOrigin = (() => {
+		try {
+			return new URL(base).origin;
+		} catch {
+			return '';
+		}
+	})();
+	const normalizePath = (p: string) => {
+		if (p.startsWith('/storage/')) return `/product-media/${p.slice('/storage/'.length)}`;
+		return p;
+	};
+	const v = String(raw || '').trim();
+	if (v === '') return fallback;
+	if (v.startsWith('http://') || v.startsWith('https://')) {
+		try {
+			const u = new URL(v);
+			u.pathname = normalizePath(u.pathname);
+			const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '0.0.0.0';
+			const isCms = cmsOrigin !== '' && u.origin === cmsOrigin;
+			if (isLoopback || isCms) return `/cms${u.pathname}${u.search}`;
+		} catch {}
+		return v;
+	}
+	if (v.startsWith('/')) return `/cms${normalizePath(v)}`;
+	return `/cms/${v}`;
+};
+
 try {
 	const base = String(CMS_URL).replace(/\/$/, '');
 	const url = `${base}/api/products${q ? `?q=${encodeURIComponent(q)}` : ''}`;
@@ -52,24 +81,16 @@ try {
 
 try {
 	const base = String(CMS_URL).replace(/\/$/, '');
-	const resolveSettingValue = (raw: string, fallback: string) => {
-		const v = String(raw || '').trim();
-		if (v === '') return fallback;
-		if (v.startsWith('http://') || v.startsWith('https://')) return v;
-		if (v.startsWith('/')) return `${base}${v}`;
-		return `${base}/${v}`;
-	};
-
 	const desktopRes = await fetch(`${base}/api/site-settings/marketplace_hero_banner`);
 	if (desktopRes.ok) {
 		const json = await desktopRes.json().catch(() => null);
-		heroDesktopSrc = resolveSettingValue(json?.data?.value ?? '', heroDesktopSrc);
+		heroDesktopSrc = resolveCmsAssetUrl(base, json?.data?.value ?? '', heroDesktopSrc);
 	}
 
 	const mobileRes = await fetch(`${base}/api/site-settings/marketplace_hero_banner_mobile`);
 	if (mobileRes.ok) {
 		const json = await mobileRes.json().catch(() => null);
-		heroMobileSrc = resolveSettingValue(json?.data?.value ?? '', heroMobileSrc);
+		heroMobileSrc = resolveCmsAssetUrl(base, json?.data?.value ?? '', heroMobileSrc);
 	}
 } catch {}
 
@@ -96,7 +117,10 @@ const productsView: ProductView[] = products.map((p, idx) => {
 	const size = sizes[p.id % sizes.length];
 	const color = colors[p.id % colors.length];
 	const photoNum = (idx % 6) + 1;
-	const imageUrl = (p.image_url && String(p.image_url).trim() !== '') ? String(p.image_url) : `/marketplace/baju ${photoNum}.webp`;
+	const imageUrl =
+		p.image_url && String(p.image_url).trim() !== ''
+			? resolveCmsAssetUrl(CMS_URL, String(p.image_url), `/marketplace/baju ${photoNum}.webp`)
+			: `/marketplace/baju ${photoNum}.webp`;
 
 	return {
 		...p,
@@ -283,19 +307,22 @@ const featuredCollections = [
 
 								<div id="product-grid" class="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 									{productsForGrid.map((p, idx) => {
+										const stockValue = Number(p.stock ?? 0) || 0;
 										const labelCode = String(p.mst_label?.code ?? p.label ?? '').toLowerCase().trim();
 										const labelName = String(p.mst_label?.name ?? '').trim();
 										const isSale = labelCode === 'promo' || labelCode === 'sale' || !!p.is_sale;
 										const isBestSeller = labelCode === 'best_seller' || labelCode === 'bestseller' || !!p.is_best_seller;
 										const isNew = labelCode === 'new' || !!p.is_new;
-										const isSold = typeof p.is_sold === 'boolean' ? p.is_sold : !((p.stock ?? 0) > 0);
+										const isSoldOut = typeof p.is_sold === 'boolean' ? p.is_sold : !(stockValue > 0);
 										const hasCustomLabel = labelCode !== '' && labelCode !== 'none' && !isSale && !isBestSeller && !isNew;
-										const showSale = isSale;
-										const showBestSeller = !showSale && isBestSeller;
-										const showNew = !showSale && !showBestSeller && isNew;
-										const showCustom = !showSale && !showBestSeller && !showNew && hasCustomLabel;
-										const showSold = !showSale && !showBestSeller && !showNew && !showCustom && isSold;
-										const badgeText = showSale
+										const showSoldOut = isSoldOut;
+										const showSale = !showSoldOut && isSale;
+										const showBestSeller = !showSoldOut && !showSale && isBestSeller;
+										const showNew = !showSoldOut && !showSale && !showBestSeller && isNew;
+										const showCustom = !showSoldOut && !showSale && !showBestSeller && !showNew && hasCustomLabel;
+										const badgeText = showSoldOut
+											? 'Sold Out'
+											: showSale
 											? 'Promo'
 											: showBestSeller
 												? 'Best Seller'
@@ -303,25 +330,25 @@ const featuredCollections = [
 													? 'New'
 													: showCustom
 														? (labelName || labelCode)
-														: showSold
-															? 'Sold'
-															: '';
-										const badgeClass = showSale
-											? 'bg-red-500 text-white'
-											: showBestSeller
-												? 'bg-zinc-900 text-white'
-												: showNew
-													? 'bg-black text-white'
-													: showCustom
-														? 'border border-zinc-200 bg-white/90 text-zinc-900 backdrop-blur'
-														: showSold
-															? 'bg-amber-500 text-white'
+														: '';
+										const badgeClass = showSoldOut
+											? 'bg-amber-500 text-white'
+											: showSale
+												? 'bg-red-500 text-white'
+												: showBestSeller
+													? 'bg-zinc-900 text-white'
+													: showNew
+														? 'bg-black text-white'
+														: showCustom
+															? 'border border-zinc-200 bg-white/90 text-zinc-900 backdrop-blur'
 															: 'bg-white/90 text-black';
+										const ctaText = showSoldOut ? 'Sold Out' : 'Add to Cart';
 
 										return (
 											<article
 												data-product-card
 												data-product-id={String(p.id)}
+												data-stock={String(stockValue)}
 												data-title={p.title}
 												data-price={p.price_formatted}
 												data-image={p.imageUrl}
@@ -380,9 +407,9 @@ const featuredCollections = [
 														class="relative mt-auto inline-flex w-full items-center justify-center overflow-hidden rounded-xl bg-zinc-900 py-3 text-sm font-medium text-white shadow-sm transition active:scale-95 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
 														@click.prevent="window.__quickAdd && window.__quickAdd.show($el.closest('[data-product-card]'))"
 														aria-label={`Add ${p.title} to cart`}
-														disabled={showSold}
+														disabled={stockValue <= 0}
 													>
-														Add to Cart
+														{ctaText}
 													</button>
 												</div>
 											</article>
@@ -456,7 +483,7 @@ const featuredCollections = [
 							<div class="min-w-0 flex flex-col gap-5 p-6 md:p-10">
 								<div class="flex flex-col gap-1">
 									<h3 class="text-2xl font-semibold tracking-tight text-zinc-900 line-clamp-2" x-text="product?.title"></h3>
-									<p class="text-3xl font-bold text-zinc-900" x-text="product?.price"></p>
+									<p class="text-3xl font-bold text-zinc-900" x-text="getDisplayPrice()"></p>
 								</div>
 
 								<div class="flex flex-col gap-3">
@@ -468,7 +495,7 @@ const featuredCollections = [
 										<template x-for="v in variants" :key="v.id">
 											<button
 												type="button"
-												@click="selectedSize = v.id"
+												@click="selectedSize = v.id; qty = Math.max(1, Math.min(qty, Math.trunc(Number(v.stock || 0))))"
 												:disabled="Number(v.stock || 0) === 0"
 												:class="(selectedSize === v.id ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 hover:border-zinc-400') + (Number(v.stock || 0) === 0 ? ' opacity-30 line-through cursor-not-allowed' : '')"
 												class="h-12 rounded-xl border-2 text-sm font-semibold transition"
@@ -488,9 +515,23 @@ const featuredCollections = [
 									<div class="flex h-12 w-full items-center justify-between gap-4 rounded-xl border-2 border-zinc-200 bg-zinc-50 px-3">
 										<div class="text-sm font-medium text-zinc-600">Jumlah</div>
 										<div class="flex items-center gap-2">
-											<button type="button" @click="qty = Math.max(1, qty - 1)" class="grid h-10 w-10 place-items-center rounded-lg bg-zinc-100 text-zinc-700 transition hover:bg-zinc-200 hover:text-zinc-900">-</button>
+											<button
+												type="button"
+												@click="qty = Math.max(1, qty - 1)"
+												:disabled="qty <= 1"
+												class="grid h-10 w-10 place-items-center rounded-lg bg-zinc-100 text-zinc-700 transition hover:bg-zinc-200 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+											>
+												-
+											</button>
 											<span class="w-10 text-center text-base font-semibold text-zinc-900" x-text="qty"></span>
-											<button type="button" @click="qty = qty + 1" class="grid h-10 w-10 place-items-center rounded-lg bg-zinc-100 text-zinc-700 transition hover:bg-zinc-200 hover:text-zinc-900">+</button>
+											<button
+												type="button"
+												@click="qty = Math.min(Math.max(1, getSelectedStock()), qty + 1)"
+												:disabled="!selectedSize || getSelectedStock() === 0 || qty >= getSelectedStock()"
+												class="grid h-10 w-10 place-items-center rounded-lg bg-zinc-100 text-zinc-700 transition hover:bg-zinc-200 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+											>
+												+
+											</button>
 										</div>
 									</div>
 									<button
@@ -719,6 +760,18 @@ const featuredCollections = [
 					variants: [],
 					selectedSize: null,
 					qty: 1,
+					getSelectedPriceValue() {
+						const basePriceRaw = Number(this.product?.priceValue ?? 0);
+						const basePrice = Number.isFinite(basePriceRaw) ? Math.max(0, Math.trunc(basePriceRaw)) : 0;
+						const variantId = Number(this.selectedSize ?? 0);
+						const v = this.variants.find((x) => Number(x?.id) === variantId) || null;
+						const variantPriceRaw = v?.price === null || v?.price === undefined ? NaN : Number(v.price);
+						const variantPrice = Number.isFinite(variantPriceRaw) ? Math.max(0, Math.trunc(variantPriceRaw)) : null;
+						return variantPrice === null ? basePrice : variantPrice;
+					},
+					getDisplayPrice() {
+						return formatPrice(this.getSelectedPriceValue());
+					},
 					addSimple(productId, qty, meta = null) {
 						if (!Number.isInteger(productId) || productId <= 0) return;
 						const safeQty = Math.max(1, Math.trunc(Number(qty || 1)));
@@ -727,22 +780,36 @@ const featuredCollections = [
 						const metaImage = String(metaObj?.image ?? '').trim();
 						const metaPriceRaw = Number(metaObj?.price ?? metaObj?.priceValue ?? NaN);
 						const metaPrice = Number.isFinite(metaPriceRaw) ? Math.max(0, Math.trunc(metaPriceRaw)) : null;
+						const metaStockRaw = Number(metaObj?.stock ?? NaN);
+						const metaStock = Number.isFinite(metaStockRaw) ? Math.max(0, Math.trunc(metaStockRaw)) : null;
 
 						const items = readItems();
 						const idx = items.findIndex((x) => Number(x?.product_id ?? 0) === productId && (x?.variant_id === null || x?.variant_id === undefined));
 						if (idx >= 0) {
 							const prev = Number(items[idx]?.qty ?? 0);
+							const nextQtyRaw = Math.max(1, (Number.isFinite(prev) ? Math.trunc(prev) : 0) + safeQty);
+							const nextQty = metaStock === null ? nextQtyRaw : Math.max(1, Math.min(metaStock, nextQtyRaw));
+							if (metaStock !== null && nextQty <= (Number.isFinite(prev) ? Math.trunc(prev) : 0)) {
+								showToast('Stok tidak mencukupi');
+								return;
+							}
 							items[idx] = {
 								...items[idx],
 								product_id: productId,
 								variant_id: null,
-								qty: Math.max(1, (Number.isFinite(prev) ? Math.trunc(prev) : 0) + safeQty),
+								qty: nextQty,
 								title: metaTitle || items[idx]?.title,
 								image: metaImage || items[idx]?.image,
 								price: metaPrice === null ? items[idx]?.price : metaPrice,
+								stock: metaStock === null ? (items[idx]?.stock ?? null) : metaStock,
 							};
 						} else {
-							items.push({ product_id: productId, variant_id: null, qty: safeQty, title: metaTitle, image: metaImage, price: metaPrice ?? 0 });
+							if (metaStock !== null && metaStock <= 0) {
+								showToast('Stok habis');
+								return;
+							}
+							const qtyIn = metaStock === null ? safeQty : Math.max(1, Math.min(metaStock, safeQty));
+							items.push({ product_id: productId, variant_id: null, qty: qtyIn, title: metaTitle, image: metaImage, price: metaPrice ?? 0, stock: metaStock });
 						}
 						writeItems(items);
 						const count = countItems(items);
@@ -762,6 +829,8 @@ const featuredCollections = [
 						const priceValueRaw = Number(productEl.dataset.priceValue || '0');
 						const priceValue = Number.isFinite(priceValueRaw) ? Math.max(0, Math.trunc(priceValueRaw)) : 0;
 						const image = String(productEl.dataset.image || '').trim();
+						const stockRaw = Number(productEl.dataset.stock || '0');
+						const stock = Number.isFinite(stockRaw) ? Math.max(0, Math.trunc(stockRaw)) : 0;
 
 						let variants = [];
 						try {
@@ -783,7 +852,7 @@ const featuredCollections = [
 							.filter((x) => Number.isFinite(x.id) && x.id > 0 && x.size);
 
 						if (!this.variants.length) {
-							this.addSimple(id, 1, { title, image, price: priceValue });
+							this.addSimple(id, 1, { title, image, price: priceValue, stock });
 							return;
 						}
 
@@ -824,9 +893,10 @@ const featuredCollections = [
 								image: image || items[idx]?.image,
 								price: chosenPrice,
 								size: sizeLabel || items[idx]?.size,
+								stock: maxQty,
 							};
 						} else {
-							items.push({ product_id: productId, variant_id: variantId, qty, title, image, price: chosenPrice, size: sizeLabel });
+							items.push({ product_id: productId, variant_id: variantId, qty, title, image, price: chosenPrice, size: sizeLabel, stock: maxQty });
 						}
 
 						writeItems(items);
