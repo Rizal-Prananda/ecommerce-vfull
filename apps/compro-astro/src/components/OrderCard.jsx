@@ -141,7 +141,7 @@ export default function OrderCard({ order }) {
   const items = String(order?.items ?? "").trim();
   const dueDate = String(order?.dueDate ?? "").trim();
   const orderId = String(order?.id ?? "").trim();
-  const thumb = String(order?.thumbnail ?? "").trim();
+  const thumb = String(order?.thumbnail ?? "").trim() || "/img/placeholder.png";
 
   return (
     <div className="rounded-xl border border-zinc-100 bg-white p-4 transition-all duration-200 hover:shadow-lg">
@@ -151,7 +151,27 @@ export default function OrderCard({ order }) {
             src={thumb}
             alt={items || orderId || "Order"}
             onError={(e) => {
-              e.currentTarget.src = "/img/placeholder.jpg";
+              const img = e.currentTarget;
+              const tried = String(img.dataset.triedAltHost || "");
+              if (!tried) {
+                try {
+                  const u = new URL(img.src);
+                  if (u.hostname === "localhost") {
+                    u.hostname = "127.0.0.1";
+                    img.dataset.triedAltHost = "1";
+                    img.src = u.toString();
+                    return;
+                  }
+                  if (u.hostname === "127.0.0.1") {
+                    u.hostname = "localhost";
+                    img.dataset.triedAltHost = "1";
+                    img.src = u.toString();
+                    return;
+                  }
+                } catch {}
+              }
+              img.onerror = null;
+              img.src = "/img/placeholder.png";
             }}
             className="h-16 w-16 flex-none rounded-lg bg-gray-100 object-cover"
             loading="lazy"

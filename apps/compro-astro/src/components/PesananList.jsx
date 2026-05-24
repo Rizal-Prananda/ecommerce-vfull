@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import OrderCard from "./OrderCard.jsx";
 
@@ -12,11 +12,53 @@ const TABS = [
 export default function PesananList({ orders = [] }) {
   const [activeTab, setActiveTab] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [data, setData] = useState(Array.isArray(orders) ? orders : []);
+
+  // Fetch real orders from server (includes thumbnail from OrderItems / products)
+  useEffect(() => {
+    let cancelled = false;
+
+    const getAuth = () => {
+      try {
+        const token = String(window.localStorage.getItem("token_pelanggan") || "").trim();
+        const pelangganId = String(window.localStorage.getItem("id_pelanggan") || "").trim();
+        const idNum = Number(pelangganId || "0");
+        const id = Number.isFinite(idNum) && idNum > 0 ? String(Math.trunc(idNum)) : "";
+        return { token, id };
+      } catch {
+        return { token: "", id: "" };
+      }
+    };
+
+    const load = async () => {
+      const auth = getAuth();
+      if (!auth.id && !auth.token) return;
+
+      const res = await fetch("/api/orders", {
+        method: "GET",
+        headers: {
+          ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+          ...(auth.id ? { "X-Pelanggan-Id": auth.id } : {}),
+        },
+      }).catch(() => null);
+
+      const json = res ? await res.json().catch(() => null) : null;
+      if (!res || !res.ok || !json?.ok) return;
+
+      const list = Array.isArray(json?.data) ? json.data : [];
+      if (!cancelled) setData(list);
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Filter logic: tab status + search by order id / items
   const filtered = useMemo(() => {
     const q = String(search || "").trim().toLowerCase();
-    const list = Array.isArray(orders) ? orders : [];
+    const list = Array.isArray(data) ? data : [];
 
     return list.filter((o) => {
       const status = String(o?.status || "").toUpperCase();
@@ -26,7 +68,7 @@ export default function PesananList({ orders = [] }) {
         : true;
       return matchesTab && matchesSearch;
     });
-  }, [orders, activeTab, search]);
+  }, [data, activeTab, search]);
 
   return (
     <div className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm">
@@ -93,4 +135,3 @@ export default function PesananList({ orders = [] }) {
     </div>
   );
 }
-

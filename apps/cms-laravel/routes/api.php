@@ -240,7 +240,9 @@ Route::get('/orders', function (Request $request) {
         return response()->json(['ok' => true, 'data' => []]);
     }
 
-    $rows = $conn->table('Orders')
+    $base = $request->getSchemeAndHttpHost();
+
+    $orders = $conn->table('Orders')
         ->where('id_pelanggan', $id)
         ->orderByDesc('createdAt')
         ->get([
@@ -252,7 +254,174 @@ Route::get('/orders', function (Request $request) {
             'createdAt',
         ]);
 
-    return response()->json(['ok' => true, 'data' => $rows]);
+    $schema = $conn->getSchemaBuilder();
+    $hasItems = $schema->hasTable('OrderItems');
+    $hasProducts = $schema->hasTable('products');
+
+    if (!$hasItems) {
+        return response()->json(['ok' => true, 'data' => $orders]);
+    }
+
+    $orderIds = [];
+    foreach ($orders as $o) {
+        $orderIds[] = (int) ($o->id_order ?? 0);
+    }
+    $orderIds = array_values(array_filter($orderIds, fn ($x) => $x > 0));
+
+    $itemsByOrder = [];
+    $productIdsNeedingImage = [];
+
+    if (count($orderIds)) {
+        $items = $conn->table('OrderItems')
+            ->whereIn('id_order', $orderIds)
+            ->orderBy('id_order')
+            ->orderBy('id_item')
+            ->get([
+                'id_order',
+                'product_id',
+                'title',
+                'image',
+            ]);
+
+        foreach ($items as $it) {
+            $oid = (int) ($it->id_order ?? 0);
+            if ($oid <= 0) {
+                continue;
+            }
+            if (!isset($itemsByOrder[$oid])) {
+                $itemsByOrder[$oid] = [];
+            }
+            $itemsByOrder[$oid][] = $it;
+
+            $img = trim((string) ($it->image ?? ''));
+            $pid = (int) ($it->product_id ?? 0);
+            if ($img === '' && $pid > 0) {
+                $productIdsNeedingImage[$pid] = true;
+            }
+        }
+    }
+
+    $productImageMap = [];
+    if ($hasProducts && count($productIdsNeedingImage)) {
+        $productIds = array_keys($productIdsNeedingImage);
+        $products = $conn->table('products')
+            ->whereIn('id', $productIds)
+            ->get(['id', 'image']);
+
+        foreach ($products as $p) {
+            $pid = (int) ($p->id ?? 0);
+            if ($pid <= 0) continue;
+            $img = trim((string) ($p->image ?? ''));
+            if ($img !== '') $productImageMap[$pid] = $img;
+        }
+    }
+
+    $monthsId = [
+        1 => 'Januari',
+        2 => 'Februari',
+        3 => 'Maret',
+        4 => 'April',
+        5 => 'Mei',
+        6 => 'Juni',
+        7 => 'Juli',
+        8 => 'Agustus',
+        9 => 'September',
+        10 => 'Oktober',
+        11 => 'November',
+        12 => 'Desember',
+    ];
+
+    $resolveThumb = function (string $raw) use ($base): string {
+        $v = trim($raw);
+        if ($v === '') return '';
+
+        if (str_starts_with($v, 'http://') || str_starts_with($v, 'https://')) {
+            return $v;
+        }
+
+        if (str_starts_with($v, '/product-media/')) {
+            return $base . $v;
+        }
+        if (str_starts_with($v, 'product-media/')) {
+            return $base . '/' . $v;
+        }
+
+        if (str_starts_with($v, '/storage/products/')) {
+            $v = 'products/' . ltrim(substr($v, strlen('/storage/products/')), '/');
+        } elseif (str_starts_with($v, 'storage/products/')) {
+            $v = 'products/' . ltrim(substr($v, strlen('storage/products/')), '/');
+        } elseif (str_starts_with($v, '/products/')) {
+            $v = 'products/' . ltrim(substr($v, strlen('/products/')), '/');
+        }
+
+        if (str_starts_with($v, 'products/')) {
+            return $base . '/product-media/' . $v;
+        }
+
+        if (str_starts_with($v, '/')) {
+            return $base . $v;
+        }
+
+        return $base . '/' . $v;
+    };
+
+    $out = [];
+    foreach ($orders as $o) {
+        $oid = (int) ($o->id_order ?? 0);
+        $status = strtoupper(trim((string) ($o->status ?? '')));
+        $createdAt = trim((string) ($o->createdAt ?? ''));
+        $orderNo = trim((string) ($o->order_no ?? ''));
+        $orderId = $orderNo !== '' ? $orderNo : ('#' . $oid);
+
+        $itRows = $itemsByOrder[$oid] ?? [];
+        $titles = [];
+        $thumb = '';
+        $firstProductId = 0;
+
+        foreach ($itRows as $idx => $it) {
+            $t = trim((string) ($it->title ?? ''));
+            if ($t !== '' && count($titles) < 2) {
+                $titles[] = $t;
+            }
+            $img = trim((string) ($it->image ?? ''));
+            $pid = (int) ($it->product_id ?? 0);
+            if ($idx === 0 && $pid > 0) $firstProductId = $pid;
+            if ($thumb === '' && $img !== '') {
+                $thumb = $img;
+            }
+        }
+
+        if ($thumb === '' && $firstProductId > 0) {
+            $thumb = (string) ($productImageMap[$firstProductId] ?? '');
+        }
+
+        $thumb = $resolveThumb((string) $thumb);
+
+        $itemsStr = implode(', ', $titles);
+
+        $dueDate = null;
+        if ($status === 'UNPAID' && $createdAt !== '') {
+            try {
+                $dt = \Carbon\Carbon::parse($createdAt)->addDays(3);
+                $m = (int) $dt->month;
+                $dueDate = $dt->day . ' ' . ($monthsId[$m] ?? $dt->format('F')) . ' ' . $dt->year;
+            } catch (\Throwable $e) {
+                $dueDate = null;
+            }
+        }
+
+        $out[] = [
+            'id' => $orderId,
+            'date' => $createdAt,
+            'items' => $itemsStr,
+            'total' => (int) ($o->total ?? 0),
+            'status' => $status ?: 'UNPAID',
+            'dueDate' => $dueDate,
+            'thumbnail' => $thumb,
+        ];
+    }
+
+    return response()->json(['ok' => true, 'data' => $out]);
 });
 
 Route::get('/cart', function (Request $request) {

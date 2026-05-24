@@ -1,0 +1,300 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = false;
+
+const { id } = Astro.params as { id?: string };
+const safeId = String(id ?? '').trim();
+
+const printNow = String(Astro.url.searchParams.get('print') ?? '').toLowerCase() === 'true';
+const sizeMode = String(Astro.url.searchParams.get('size') ?? '').toLowerCase();
+const isThermal = sizeMode === 'thermal';
+
+const struk = {
+	id: safeId || 'ORD-20260524-704865180',
+	date: '24 Mei 2026, 19:20',
+	customer: 'Rizal Prananda',
+	cashier: 'Admin',
+	items: [
+		{ name: 'Paket Wedding', qty: 1, price: 1500000 },
+		{ name: 'Extra Album', qty: 1, price: 10000 },
+	],
+	total: 1510000,
+	payment: { method: 'BCA Virtual Account', status: 'LUNAS' },
+	store: { name: 'RIZAL STUDIO', address: 'Jl. Raya Banjaran No.123, Bandung' },
+};
+
+const formatRupiah = (n: number) => `Rp ${Math.max(0, Math.trunc(Number(n || 0))).toLocaleString('id-ID')}`;
+const subtotal = struk.items.reduce((sum, it) => sum + Math.max(0, Math.trunc(Number(it.price || 0))) * Math.max(1, Math.trunc(Number(it.qty || 1))), 0);
+const discount = Math.max(0, subtotal - Math.max(0, Math.trunc(Number(struk.total || 0))));
+---
+
+<Layout title={`Struk ${struk.id}`.trim()}>
+	<main class={`min-h-screen bg-zinc-50 px-4 py-8 text-zinc-900 ${isThermal ? 'font-mono' : ''}`}>
+		<div class="mx-auto w-full">
+			{/* Switch layout: A4 vs Thermal (58mm) */}
+			<div
+				id="receiptDoc"
+				class={`mx-auto w-full ${
+					isThermal
+						? 'max-w-none'
+						: 'max-w-[400px] rounded-2xl border border-zinc-200 bg-white shadow-sm'
+				}`}
+				style={isThermal ? 'width:58mm' : undefined}
+			>
+				<div class={isThermal ? 'px-2 py-3' : 'p-6'}>
+					{isThermal ? (
+						<section class="text-[12px] leading-5 text-zinc-900">
+							<div class="text-center font-semibold">{struk.store.name}</div>
+							<div class="text-center text-[12px]">{struk.store.address}</div>
+							<div class="mt-2 text-center">====================</div>
+							<div class="mt-1 text-center font-semibold">STRUK PEMBAYARAN</div>
+							<div class="mt-1 text-center">====================</div>
+
+							<div class="mt-2 space-y-0.5 text-center">
+								<div>No Order: {struk.id}</div>
+								<div>Tanggal: {struk.date}</div>
+								<div>Kasir: {struk.cashier}</div>
+								<div>Pelanggan: {struk.customer}</div>
+							</div>
+
+							<div class="mt-2 text-center">====================</div>
+							<div class="mt-2 space-y-2 text-left">
+								{struk.items.map((it) => {
+									const qty = Math.max(1, Math.trunc(Number(it.qty || 1)));
+									const price = Math.max(0, Math.trunc(Number(it.price || 0)));
+									const line = qty * price;
+									return (
+										<div>
+											<div class="font-semibold">{it.name}</div>
+											<div class="flex items-center justify-between">
+												<div>
+													{qty} x {formatRupiah(price)}
+												</div>
+												<div class="font-semibold">{formatRupiah(line)}</div>
+											</div>
+										</div>
+									);
+								})}
+							</div>
+
+							<div class="mt-2 text-center">====================</div>
+							<div class="mt-2 space-y-1">
+								<div class="flex items-center justify-between">
+									<div>Subtotal</div>
+									<div>{formatRupiah(subtotal)}</div>
+								</div>
+								<div class="flex items-center justify-between">
+									<div>Diskon</div>
+									<div>{formatRupiah(discount)}</div>
+								</div>
+								<div class="flex items-center justify-between text-[14px] font-bold">
+									<div>TOTAL</div>
+									<div>{formatRupiah(struk.total)}</div>
+								</div>
+							</div>
+
+							<div class="mt-2 text-center">====================</div>
+							<div class="mt-2 text-center">
+								<div>{struk.payment.method}</div>
+								<div class="font-semibold">Status: {struk.payment.status}</div>
+								<div class="mt-2">Terima kasih telah berbelanja.</div>
+							</div>
+						</section>
+					) : (
+						<section>
+							<header class="text-center">
+								<div class="mx-auto h-12 w-12 overflow-hidden rounded-xl border border-zinc-100 bg-zinc-50">
+									<img
+										src="/marketplace/logo.webp"
+										alt={struk.store.name}
+										class="h-full w-full object-contain p-2"
+										loading="lazy"
+										onerror="this.style.display='none'"
+									/>
+								</div>
+								<div class="mt-3 text-base font-bold text-zinc-900">{struk.store.name}</div>
+								<div class="mt-1 text-sm text-zinc-500">{struk.store.address}</div>
+								<div class="mt-4 text-sm font-semibold text-zinc-900">STRUK PEMBAYARAN</div>
+								<div class="mt-2 h-px w-full bg-zinc-200"></div>
+							</header>
+
+							<section class="mt-5">
+								<table class="w-full text-sm">
+									<tbody class="text-zinc-700">
+										<tr>
+											<td class="py-1 text-zinc-500">No Order</td>
+											<td class="py-1 text-right font-semibold text-zinc-900">{struk.id}</td>
+										</tr>
+										<tr>
+											<td class="py-1 text-zinc-500">Tanggal</td>
+											<td class="py-1 text-right text-zinc-900">{struk.date}</td>
+										</tr>
+										<tr>
+											<td class="py-1 text-zinc-500">Kasir</td>
+											<td class="py-1 text-right text-zinc-900">{struk.cashier}</td>
+										</tr>
+										<tr>
+											<td class="py-1 text-zinc-500">Pelanggan</td>
+											<td class="py-1 text-right text-zinc-900">{struk.customer}</td>
+										</tr>
+									</tbody>
+								</table>
+							</section>
+
+							<section class="mt-5">
+								<table class="w-full text-sm">
+									<thead>
+										<tr class="border-b border-zinc-100 text-left text-zinc-500">
+											<th class="py-2 font-semibold">Nama Item</th>
+											<th class="py-2 text-right font-semibold">Qty</th>
+											<th class="py-2 text-right font-semibold">Subtotal</th>
+										</tr>
+									</thead>
+									<tbody class="text-zinc-800">
+										{struk.items.map((it) => {
+											const qty = Math.max(1, Math.trunc(Number(it.qty || 1)));
+											const price = Math.max(0, Math.trunc(Number(it.price || 0)));
+											const line = qty * price;
+											return (
+												<tr class="border-b border-zinc-50 last:border-0">
+													<td class="py-3">
+														<div class="font-medium text-zinc-900">{it.name}</div>
+														<div class="mt-1 text-xs text-zinc-500">Harga: {formatRupiah(price)}</div>
+													</td>
+													<td class="py-3 text-right tabular-nums">{qty}</td>
+													<td class="py-3 text-right font-semibold tabular-nums">{formatRupiah(line)}</td>
+												</tr>
+											);
+										})}
+									</tbody>
+								</table>
+							</section>
+
+							<section class="mt-5 flex justify-end">
+								<div class="w-full max-w-[240px] space-y-2 text-sm">
+									<div class="flex items-center justify-between">
+										<div class="text-zinc-500">Subtotal</div>
+										<div class="font-medium text-zinc-900 tabular-nums">{formatRupiah(subtotal)}</div>
+									</div>
+									<div class="flex items-center justify-between">
+										<div class="text-zinc-500">Diskon</div>
+										<div class="font-medium text-zinc-900 tabular-nums">{formatRupiah(discount)}</div>
+									</div>
+									<div class="mt-2 border-t border-zinc-100 pt-2">
+										<div class="flex items-center justify-between">
+											<div class="text-base font-semibold text-zinc-900">TOTAL</div>
+											<div class="text-base font-bold text-zinc-900 tabular-nums">{formatRupiah(struk.total)}</div>
+										</div>
+									</div>
+								</div>
+							</section>
+
+							<section class="mt-5 rounded-xl border border-zinc-100 bg-zinc-50/40 px-4 py-3 text-sm text-zinc-700">
+								<div class="flex items-center justify-between gap-3">
+									<div class="text-zinc-500">Pembayaran</div>
+									<div class="font-medium text-zinc-900">{struk.payment.method}</div>
+								</div>
+								<div class="mt-1 flex items-center justify-between gap-3">
+									<div class="text-zinc-500">Status</div>
+									<div class="font-semibold text-emerald-700">{struk.payment.status}</div>
+								</div>
+							</section>
+
+							<footer class="mt-5 text-center text-xs text-zinc-500">
+								Terima kasih telah berbelanja. Simpan struk ini sebagai bukti pembayaran.
+							</footer>
+						</section>
+					)}
+				</div>
+
+				<div class="no-print border-t border-zinc-100 bg-white p-4">
+					<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+						<div class="flex gap-2">
+							<button
+								type="button"
+								class="inline-flex h-10 items-center justify-center rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 active:scale-95"
+								data-print
+							>
+								Print Ulang
+							</button>
+							<button
+								type="button"
+								class="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50 active:scale-95"
+								data-download-pdf
+							>
+								Download PDF
+							</button>
+						</div>
+						<div class="text-xs text-zinc-500">{isThermal ? 'Mode: Thermal 58mm' : 'Mode: A4'}</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</main>
+
+	<script is:inline>
+		(function () {
+			const shouldPrint = ${JSON.stringify(printNow)};
+			const isThermal = ${JSON.stringify(isThermal)};
+
+			const doc = document.getElementById('receiptDoc');
+			const printBtn = document.querySelector('[data-print]');
+			const downloadBtn = document.querySelector('[data-download-pdf]');
+
+			const loadHtml2Pdf = () =>
+				new Promise((resolve, reject) => {
+					if (window.html2pdf) return resolve(window.html2pdf);
+					const script = document.createElement('script');
+					script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+					script.onload = () => resolve(window.html2pdf);
+					script.onerror = () => reject(new Error('Gagal memuat html2pdf.js'));
+					document.head.appendChild(script);
+				});
+
+			const downloadPdf = async () => {
+				if (!doc) return;
+				const html2pdf = await loadHtml2Pdf();
+				const RECEIPT_ID = ${JSON.stringify(struk.id)};
+				const filename = `Struk-${RECEIPT_ID}.pdf`;
+
+				await html2pdf()
+					.set({
+						margin: isThermal ? 2 : 10,
+						filename,
+						image: { type: 'jpeg', quality: 0.98 },
+						html2canvas: { scale: 2, useCORS: true },
+						jsPDF: {
+							unit: 'mm',
+							format: isThermal ? [58, 200] : 'a4',
+							orientation: 'portrait',
+						},
+					})
+					.from(doc)
+					.save();
+			};
+
+			if (printBtn) {
+				printBtn.addEventListener('click', () => window.print());
+			}
+			if (downloadBtn) {
+				downloadBtn.addEventListener('click', () => void downloadPdf());
+			}
+
+			if (shouldPrint) {
+				window.onload = () => window.print();
+			}
+		})();
+	</script>
+
+	<style is:global>
+		@media print {
+			body {
+				margin: 0;
+			}
+			.no-print {
+				display: none !important;
+			}
+		}
+	</style>
+</Layout>
