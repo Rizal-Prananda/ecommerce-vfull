@@ -1,0 +1,485 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+export const prerender = false;
+
+const { id } = Astro.params as { id?: string };
+const safeOrderId = String(id ?? '').trim();
+
+type InvoiceItem = {
+	id_item: number;
+	title: string | null;
+	size: string | null;
+	unit_price: number;
+	qty: number;
+	line_total: number;
+};
+
+let found = false;
+let createdAt = '';
+let status = '';
+let items: InvoiceItem[] = [];
+let subtotal = 0;
+let shipping = 10000;
+let total = 0;
+let dueDate = '';
+
+const formatRupiah = (n: number) => `Rp ${Math.max(0, Math.trunc(n)).toLocaleString('id-ID')}`;
+
+const store = {
+	name: 'Rizal Studio',
+	address: 'Jl. Raya Banjaran No.123, Bandung 40227',
+	logo: '/marketplace/logo.webp',
+};
+
+const customer = {
+	name: 'Rizal Prananda',
+	email: 'rizal@gmail.com',
+	phone: '08123456789',
+	address: 'Jl. ABC No. 1, Bandung',
+};
+
+const payment = {
+	method: 'BCA Virtual Account',
+	paidAt: '',
+	ref: '123456789',
+};
+
+if (safeOrderId) {
+	let db: Database.Database | null = null;
+	try {
+		const __dirname = path.dirname(fileURLToPath(import.meta.url));
+		const dbPath = path.resolve(__dirname, '../../../../cms-laravel/database/database.sqlite');
+		db = new Database(dbPath);
+		db.pragma('journal_mode = WAL');
+		db.pragma('foreign_keys = ON');
+
+		const orderRow = db
+			.prepare(
+				`
+				SELECT id_order, order_no, status, total, createdAt
+				FROM Orders
+				WHERE order_no = ?
+				LIMIT 1
+			`,
+			)
+			.get(safeOrderId) as { id_order?: unknown; status?: unknown; total?: unknown; createdAt?: unknown } | undefined;
+
+		const idOrder = Number(orderRow?.id_order ?? 0);
+		if (Number.isFinite(idOrder) && idOrder > 0) {
+			found = true;
+			status = String(orderRow?.status ?? '');
+			total = Number(orderRow?.total ?? 0) || 0;
+			createdAt = String(orderRow?.createdAt ?? '');
+			payment.paidAt = createdAt;
+
+			items = db
+				.prepare(
+					`
+					SELECT id_item, title, size, unit_price, qty, line_total
+					FROM OrderItems
+					WHERE id_order = ?
+					ORDER BY id_item ASC
+				`,
+				)
+				.all(idOrder) as InvoiceItem[];
+
+			subtotal = items.reduce((sum, it) => sum + (Number(it?.line_total ?? 0) || 0), 0);
+			if (items.length === 0) shipping = 0;
+
+			try {
+				const dt = new Date(createdAt.replace(' ', 'T'));
+				if (!Number.isNaN(dt.getTime())) {
+					dt.setDate(dt.getDate() + 3);
+					const yyyy = dt.getFullYear();
+					const mm = String(dt.getMonth() + 1).padStart(2, '0');
+					const dd = String(dt.getDate()).padStart(2, '0');
+					dueDate = `${dd}-${mm}-${yyyy}`;
+				}
+			} catch {}
+		}
+	} catch {
+		found = false;
+	} finally {
+		try {
+			db?.close();
+		} catch {}
+	}
+}
+
+const statusUpper = String(status || '').toUpperCase() || 'UNPAID';
+const isPaid = statusUpper === 'PAID';
+const badgeClass = isPaid
+	? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+	: 'border-amber-200 bg-amber-50 text-amber-700';
+
+const discount = 0;
+---
+
+<Layout title={`Invoice ${safeOrderId || ''}`.trim()}>
+	<main class="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-900 md:px-8">
+		<div class="mx-auto w-full max-w-[980px]">
+			{found ? (
+				<div id="invoiceDoc" class="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+					<div class="p-6 md:p-10">
+						<header class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+							<div class="flex items-start gap-4">
+								<div class="h-12 w-12 overflow-hidden rounded-xl border border-zinc-100 bg-zinc-50">
+									<img
+										src={store.logo}
+										alt={store.name}
+										class="h-full w-full object-contain p-2"
+										loading="lazy"
+										onerror="this.style.display='none'"
+									/>
+								</div>
+								<div>
+									<div class="text-lg font-bold text-zinc-900">{store.name}</div>
+									<div class="mt-1 max-w-[420px] text-sm text-zinc-500">{store.address}</div>
+								</div>
+							</div>
+
+							<div class="text-left md:text-right">
+								<div class="flex items-center gap-3 md:justify-end">
+									<div class="text-3xl font-extrabold tracking-tight">INVOICE</div>
+									<span class={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+										{statusUpper}
+									</span>
+								</div>
+								<div class="mt-4 grid gap-2 text-sm text-zinc-600 md:justify-end">
+									<div class="flex items-center justify-between gap-6 md:justify-end">
+										<div class="text-zinc-500">No. Invoice</div>
+										<div class="font-semibold text-zinc-900">{safeOrderId}</div>
+									</div>
+									<div class="flex items-center justify-between gap-6 md:justify-end">
+										<div class="text-zinc-500">Tanggal Invoice</div>
+										<div class="font-medium text-zinc-900">{createdAt || '-'}</div>
+									</div>
+									<div class="flex items-center justify-between gap-6 md:justify-end">
+										<div class="text-zinc-500">Jatuh Tempo</div>
+										<div class="font-medium text-zinc-900">{dueDate || '-'}</div>
+									</div>
+								</div>
+							</div>
+						</header>
+
+						<section class="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+							<div class="rounded-2xl border border-zinc-100 bg-zinc-50/40 p-5">
+								<div class="text-sm font-semibold text-zinc-900">DITAGIHKAN KEPADA</div>
+								<div class="mt-3 space-y-1 text-sm text-zinc-700">
+									<div class="font-semibold text-zinc-900">{customer.name}</div>
+									<div>{customer.email}</div>
+									<div>{customer.phone}</div>
+									<div class="text-zinc-600">{customer.address}</div>
+								</div>
+							</div>
+
+							<div class="rounded-2xl border border-zinc-100 bg-zinc-50/40 p-5">
+								<div class="text-sm font-semibold text-zinc-900">METODE PEMBAYARAN</div>
+								{isPaid ? (
+									<div class="mt-3 space-y-2 text-sm text-zinc-700">
+										<div class="flex items-center justify-between gap-4">
+											<div class="text-zinc-500">Metode</div>
+											<div class="font-medium text-zinc-900">{payment.method}</div>
+										</div>
+										<div class="flex items-center justify-between gap-4">
+											<div class="text-zinc-500">Tanggal Bayar</div>
+											<div class="font-medium text-zinc-900">{payment.paidAt || '-'}</div>
+										</div>
+										<div class="flex items-center justify-between gap-4">
+											<div class="text-zinc-500">No. Referensi</div>
+											<div class="font-medium text-zinc-900">{payment.ref}</div>
+										</div>
+									</div>
+								) : (
+									<div class="mt-3 text-sm font-medium text-amber-700">Menunggu Pembayaran</div>
+								)}
+							</div>
+						</section>
+
+						<section class="mt-8">
+							<div class="hidden md:block">
+								<table class="w-full">
+									<thead>
+										<tr class="border-b border-zinc-100 text-left text-sm text-zinc-500">
+											<th class="py-3 font-semibold">Item</th>
+											<th class="py-3 font-semibold">Variant</th>
+											<th class="py-3 text-right font-semibold">Qty</th>
+											<th class="py-3 text-right font-semibold">Harga Satuan</th>
+											<th class="py-3 text-right font-semibold">Total</th>
+										</tr>
+									</thead>
+									<tbody class="text-sm text-zinc-800">
+										{items.map((it) => (
+											<tr class="border-b border-zinc-50">
+												<td class="py-4 font-medium text-zinc-900">{it.title || 'Produk'}</td>
+												<td class="py-4 text-zinc-600">{it.size || '-'}</td>
+												<td class="py-4 text-right tabular-nums">{it.qty}</td>
+												<td class="py-4 text-right tabular-nums">{formatRupiah(Number(it.unit_price || 0))}</td>
+												<td class="py-4 text-right font-semibold tabular-nums">{formatRupiah(Number(it.line_total || 0))}</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+
+							<div class="space-y-3 md:hidden">
+								{items.map((it) => (
+									<div class="rounded-2xl border border-zinc-100 bg-white p-4">
+										<div class="flex items-start justify-between gap-4">
+											<div class="min-w-0">
+												<div class="truncate text-sm font-semibold text-zinc-900">{it.title || 'Produk'}</div>
+												<div class="mt-1 text-xs text-zinc-500">Variant: {it.size || '-'}</div>
+											</div>
+											<div class="text-right text-sm font-semibold text-zinc-900">{formatRupiah(Number(it.line_total || 0))}</div>
+										</div>
+										<div class="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-600">
+											<div class="rounded-xl bg-zinc-50 px-3 py-2">
+												<div class="text-zinc-500">Qty</div>
+												<div class="mt-0.5 font-semibold text-zinc-900 tabular-nums">{it.qty}</div>
+											</div>
+											<div class="rounded-xl bg-zinc-50 px-3 py-2">
+												<div class="text-zinc-500">Harga</div>
+												<div class="mt-0.5 font-semibold text-zinc-900 tabular-nums">{formatRupiah(Number(it.unit_price || 0))}</div>
+											</div>
+										</div>
+									</div>
+								))}
+							</div>
+						</section>
+
+						<section class="mt-8 flex justify-end">
+							<div class="w-full max-w-[420px] space-y-2 text-sm">
+								<div class="flex items-center justify-between">
+									<div class="text-zinc-500">Subtotal</div>
+									<div class="font-medium text-zinc-900 tabular-nums">{formatRupiah(subtotal)}</div>
+								</div>
+								<div class="flex items-center justify-between">
+									<div class="text-zinc-500">Diskon</div>
+									<div class="font-medium text-zinc-900 tabular-nums">{formatRupiah(discount)}</div>
+								</div>
+								<div class="flex items-center justify-between">
+									<div class="text-zinc-500">Shipping</div>
+									<div class="font-medium text-zinc-900 tabular-nums">{formatRupiah(shipping)}</div>
+								</div>
+								<div class="mt-3 border-t border-zinc-100 pt-3">
+									<div class="flex items-center justify-between">
+										<div class="text-lg font-semibold text-zinc-900">Total</div>
+										<div class="text-lg font-bold text-zinc-900 tabular-nums">{formatRupiah(total || subtotal - discount + shipping)}</div>
+									</div>
+								</div>
+							</div>
+						</section>
+					</div>
+
+					<footer class="border-t border-zinc-100 bg-white px-6 py-6 md:px-10">
+						<div class="text-sm text-zinc-600">Terima kasih telah berbelanja. Simpan invoice ini sebagai bukti pembayaran.</div>
+
+						<div data-export-hide class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
+							<div class="flex flex-col gap-2 sm:flex-row">
+								<button
+									type="button"
+									class="inline-flex h-11 items-center justify-center rounded-xl bg-zinc-900 px-5 text-sm font-semibold text-white transition hover:bg-zinc-800 active:scale-95"
+									data-download-pdf
+								>
+									Download Invoice
+								</button>
+								<button
+									type="button"
+									class="inline-flex h-11 items-center justify-center rounded-xl border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50 active:scale-95"
+									data-print
+								>
+									Print Invoice
+								</button>
+							</div>
+
+							<a
+								href="/PesananSaya?menu=pesanan"
+								class="inline-flex h-11 items-center justify-center rounded-xl border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50 active:scale-95"
+							>
+								Lihat Pesanan Saya
+							</a>
+						</div>
+					</footer>
+				</div>
+			) : (
+				<div class="rounded-2xl border border-zinc-100 bg-white p-8 shadow-sm">
+					<div class="text-2xl font-bold text-zinc-900">Invoice tidak ditemukan</div>
+					<div class="mt-2 text-sm text-zinc-500">Order ID: <span class="font-semibold text-zinc-900">{safeOrderId || '-'}</span></div>
+					<div class="mt-8 flex flex-col gap-3 sm:flex-row">
+						<a href="/keranjang" class="inline-flex h-12 items-center justify-center rounded-xl bg-zinc-900 px-6 text-sm font-semibold text-white transition hover:bg-zinc-800 active:scale-95">
+							Kembali ke Keranjang
+						</a>
+						<a href="/marketplace" class="inline-flex h-12 items-center justify-center rounded-xl border border-zinc-200 bg-white px-6 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50 active:scale-95">
+							Belanja Lagi
+						</a>
+					</div>
+				</div>
+			)}
+		</div>
+	</main>
+
+	<script is:inline data-astro-rerun>
+		(function () {
+			window.__invoiceDelegatedHandlersInstalled = window.__invoiceDelegatedHandlersInstalled || false;
+			const INVOICE_ID = {JSON.stringify(safeOrderId)};
+
+			let html2pdfPromise = null;
+			const loadHtml2Pdf = () => {
+				if (html2pdfPromise) return html2pdfPromise;
+				html2pdfPromise = new Promise((resolve, reject) => {
+					if (window.html2pdf) return resolve(window.html2pdf);
+					const script = document.createElement('script');
+					script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+					script.onload = () => resolve(window.html2pdf);
+					script.onerror = () => reject(new Error('Gagal memuat html2pdf.js'));
+					document.head.appendChild(script);
+				});
+				return html2pdfPromise;
+			};
+
+			const setBtnLoading = (btn, loading) => {
+				if (!(btn instanceof HTMLButtonElement)) return;
+				btn.disabled = !!loading;
+				btn.dataset.loading = loading ? 'true' : 'false';
+				if (loading) btn.classList.add('opacity-70', 'cursor-not-allowed');
+				else btn.classList.remove('opacity-70', 'cursor-not-allowed');
+			};
+
+			const openPdfInNewTab = async (doc, downloadBtn) => {
+				if (!doc) return;
+				const popup = window.open('', '_blank');
+				if (!popup) {
+					window.alert('Pop-up diblokir browser. Izinkan pop-up untuk melihat PDF.');
+					return;
+				}
+				try {
+					popup.document.title = `Invoice ${INVOICE_ID}`;
+					popup.document.body.innerHTML = '<div style="font-family:system-ui,Segoe UI,Arial;padding:16px">Menyiapkan PDF…</div>';
+				} catch {}
+
+				const hideEls = Array.from(doc.querySelectorAll('[data-export-hide]'));
+				const prev = hideEls.map((el) => (el instanceof HTMLElement ? el.style.display : ''));
+				for (const el of hideEls) {
+					if (el instanceof HTMLElement) el.style.display = 'none';
+				}
+
+				try {
+					setBtnLoading(downloadBtn, true);
+					const html2pdf = await loadHtml2Pdf();
+					const filename = `Invoice-${INVOICE_ID}.pdf`;
+
+					const worker = html2pdf()
+						.set({
+							margin: 10,
+							filename,
+							image: { type: 'jpeg', quality: 0.98 },
+							html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff' },
+							jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+						})
+						.from(doc)
+						.toPdf();
+
+					const pdf = await worker.get('pdf');
+					const blob = pdf.output('blob');
+					const url = URL.createObjectURL(blob);
+
+					try {
+						popup.location.href = url;
+					} catch {
+						window.open(url, '_blank');
+					}
+				} catch (e) {
+					const msg = String(e?.message ?? '').trim() || 'Gagal download invoice.';
+					window.alert(msg);
+					try {
+						popup.close();
+					} catch {}
+				} finally {
+					setBtnLoading(downloadBtn, false);
+					for (let i = 0; i < hideEls.length; i++) {
+						const el = hideEls[i];
+						if (el instanceof HTMLElement) el.style.display = prev[i] ?? '';
+					}
+				}
+			};
+
+			const bind = () => {
+				const doc = document.getElementById('invoiceDoc');
+				const downloadBtn = document.querySelector('[data-download-pdf]');
+				const printBtn = document.querySelector('[data-print]');
+
+				if (downloadBtn instanceof HTMLButtonElement && downloadBtn.dataset.bound !== 'true') {
+					downloadBtn.dataset.bound = 'true';
+					downloadBtn.addEventListener('click', () => void openPdfInNewTab(doc, downloadBtn));
+				}
+
+				if (printBtn instanceof HTMLButtonElement && printBtn.dataset.bound !== 'true') {
+					printBtn.dataset.bound = 'true';
+					printBtn.addEventListener('click', () => window.print());
+				}
+			};
+
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', bind, { once: true });
+			} else {
+				bind();
+			}
+			document.addEventListener('astro:page-load', bind);
+
+			if (!window.__invoiceDelegatedHandlersInstalled) {
+				window.__invoiceDelegatedHandlersInstalled = true;
+				document.addEventListener('click', (e) => {
+					const target = e.target;
+					if (!(target instanceof Element)) return;
+
+					const downloadEl = target.closest('[data-download-pdf]');
+					if (downloadEl instanceof HTMLButtonElement) {
+						e.preventDefault();
+						void openPdfInNewTab(document.getElementById('invoiceDoc'), downloadEl);
+						return;
+					}
+
+					const printEl = target.closest('[data-print]');
+					if (printEl instanceof HTMLButtonElement) {
+						e.preventDefault();
+						window.print();
+					}
+				});
+			}
+		})();
+	</script>
+
+	<style is:global>
+		/* Print CSS: sembunyikan tombol & set background putih saat print */
+		@media print {
+			html,
+			body {
+				background: #fff !important;
+				margin: 0 !important;
+				padding: 0 !important;
+			}
+			@page {
+				margin: 0;
+			}
+			.print\:hidden {
+				display: none !important;
+			}
+			#invoiceDoc {
+				border: 0 !important;
+				border-radius: 0 !important;
+				box-shadow: none !important;
+			}
+			table,
+			tr,
+			td,
+			th {
+				break-inside: avoid;
+			}
+		}
+	</style>
+</Layout>
