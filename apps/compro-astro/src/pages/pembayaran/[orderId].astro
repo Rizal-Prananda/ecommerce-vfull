@@ -1,0 +1,215 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+export const prerender = false;
+
+const { orderId } = Astro.params as { orderId?: string };
+const safeOrderId = String(orderId ?? '').trim();
+
+type PayItem = {
+	id_item: number;
+	title: string | null;
+	size: string | null;
+	unit_price: number;
+	qty: number;
+	line_total: number;
+};
+
+let found = false;
+let status = '';
+let total = 0;
+let items: PayItem[] = [];
+
+const formatRupiah = (n: number) => `Rp ${Math.max(0, Math.trunc(n)).toLocaleString('id-ID')}`;
+
+if (safeOrderId) {
+	let db: Database.Database | null = null;
+	try {
+		const __dirname = path.dirname(fileURLToPath(import.meta.url));
+		const dbPath = path.resolve(__dirname, '../../../../cms-laravel/database/database.sqlite');
+		db = new Database(dbPath);
+		db.pragma('journal_mode = WAL');
+		db.pragma('foreign_keys = ON');
+
+		const orderRow = db
+			.prepare(
+				`
+				SELECT id_order, status, total
+				FROM Orders
+				WHERE order_no = ?
+				LIMIT 1
+			`
+			)
+			.get(safeOrderId) as { id_order?: unknown; status?: unknown; total?: unknown } | undefined;
+
+		const idOrder = Number(orderRow?.id_order ?? 0);
+		if (Number.isFinite(idOrder) && idOrder > 0) {
+			found = true;
+			status = String(orderRow?.status ?? '');
+			total = Number(orderRow?.total ?? 0) || 0;
+
+			items = db
+				.prepare(
+					`
+					SELECT id_item, title, size, unit_price, qty, line_total
+					FROM OrderItems
+					WHERE id_order = ?
+					ORDER BY id_item ASC
+				`
+				)
+				.all(idOrder) as PayItem[];
+		}
+	} catch {
+		found = false;
+	} finally {
+		try {
+			db?.close();
+		} catch {}
+	}
+}
+---
+
+<Layout title={`Pembayaran ${safeOrderId || ''}`.trim()}>
+	<main class="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-900 md:px-8">
+		<div class="mx-auto w-full max-w-[960px]">
+			<div class="mb-6">
+				<div class="text-3xl font-bold">Pembayaran</div>
+				<div class="mt-1 text-sm text-zinc-500">Order ID: <span class="font-semibold text-zinc-900">{safeOrderId || '-'}</span></div>
+			</div>
+
+			{found ? (
+				<div
+					x-data={`paymentPage(${JSON.stringify({
+						orderId: safeOrderId,
+						status,
+						total,
+					})})`}
+					x-init="init()"
+					class="grid grid-cols-1 gap-8 lg:grid-cols-3"
+				>
+					<section class="lg:col-span-2">
+						<div class="rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm">
+							<div class="text-lg font-semibold">Ringkasan</div>
+							<div class="mt-4 space-y-3">
+								{items.length ? (
+									items.map((it) => (
+										<div class="flex items-start justify-between gap-4 rounded-xl border border-zinc-100 bg-zinc-50/40 p-4">
+											<div class="min-w-0">
+												<div class="truncate text-sm font-semibold text-zinc-900">{it.title || 'Produk'}</div>
+												<div class="mt-1 text-xs text-zinc-500">{it.size ? `Variant: ${it.size} • ` : ''}Qty: {it.qty}</div>
+											</div>
+											<div class="text-right text-sm font-semibold text-zinc-900">{formatRupiah(Number(it.line_total || 0))}</div>
+										</div>
+									))
+								) : (
+									<div class="text-sm text-zinc-500">Tidak ada item.</div>
+								)}
+							</div>
+						</div>
+
+						<div class="mt-6 rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm">
+							<div class="text-lg font-semibold">Metode Pembayaran</div>
+							<div class="mt-4 grid gap-3 sm:grid-cols-2">
+								<button type="button" class="rounded-xl border border-zinc-200 bg-white p-4 text-left transition hover:bg-zinc-50" :class="method === 'qris' ? 'border-zinc-900' : ''" @click="method='qris'">
+									<div class="text-sm font-semibold text-zinc-900">QRIS</div>
+									<div class="mt-1 text-xs text-zinc-500">Scan QR untuk bayar</div>
+								</button>
+								<button type="button" class="rounded-xl border border-zinc-200 bg-white p-4 text-left transition hover:bg-zinc-50" :class="method === 'transfer' ? 'border-zinc-900' : ''" @click="method='transfer'">
+									<div class="text-sm font-semibold text-zinc-900">Transfer Bank</div>
+									<div class="mt-1 text-xs text-zinc-500">BCA / Mandiri / BRI</div>
+								</button>
+							</div>
+
+							<div class="mt-4 rounded-xl border border-zinc-100 bg-zinc-50/40 p-4 text-sm text-zinc-700" x-show="method === 'qris'">
+								QRIS siap. Klik “Bayar Sekarang” untuk simulasi pembayaran.
+							</div>
+							<div class="mt-4 rounded-xl border border-zinc-100 bg-zinc-50/40 p-4 text-sm text-zinc-700" x-show="method === 'transfer'">
+								Transfer ke rekening dummy. Klik “Bayar Sekarang” untuk simulasi pembayaran.
+							</div>
+
+							<template x-if="error">
+								<div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" x-text="error"></div>
+							</template>
+						</div>
+					</section>
+
+					<aside class="h-fit rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+						<div class="text-lg font-semibold">Total Pembayaran</div>
+						<div class="mt-2 text-2xl font-bold text-zinc-900">{formatRupiah(total)}</div>
+						<div class="mt-2 text-sm text-zinc-500">Status: <span class="font-semibold text-zinc-900" x-text="String(status || '').toUpperCase()"></span></div>
+
+						<button
+							type="button"
+							class="mt-6 h-12 w-full rounded-xl bg-zinc-900 text-sm font-semibold text-white transition hover:bg-zinc-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-zinc-300"
+							:disabled="loading || !orderId"
+							@click="pay()"
+						>
+							<span x-text="loading ? 'Memproses...' : 'Bayar Sekarang'"></span>
+						</button>
+
+						<a href="/keranjang" class="mt-3 inline-flex h-11 w-full items-center justify-center rounded-xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50 active:scale-95">
+							Kembali ke Keranjang
+						</a>
+					</aside>
+				</div>
+			) : (
+				<div class="rounded-2xl border border-zinc-100 bg-white p-8 shadow-sm">
+					<div class="text-xl font-semibold">Order tidak ditemukan</div>
+					<div class="mt-2 text-sm text-zinc-500">Pastikan order id valid.</div>
+					<a href="/keranjang" class="mt-6 inline-flex h-12 items-center justify-center rounded-xl bg-zinc-900 px-6 text-sm font-semibold text-white transition hover:bg-zinc-800 active:scale-95">
+						Kembali ke Keranjang
+					</a>
+				</div>
+			)}
+		</div>
+	</main>
+
+	<script is:inline>
+		window.paymentPage = function paymentPage(initial) {
+			const safe = initial && typeof initial === 'object' ? initial : {};
+			return {
+				orderId: String(safe.orderId || '').trim(),
+				status: String(safe.status || '').trim(),
+				total: Number(safe.total || 0) || 0,
+				method: 'qris',
+				loading: false,
+				error: '',
+				init() {},
+				async pay() {
+					if (this.loading) return;
+					if (!this.orderId) return;
+					this.loading = true;
+					this.error = '';
+					try {
+						const res = await fetch('/api/order/pay', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ order_id: this.orderId, method: this.method }),
+						});
+						const json = await res.json().catch(() => null);
+						if (!res.ok || !json?.success) {
+							throw new Error(String(json?.message ?? 'Pembayaran gagal.'));
+						}
+
+						try {
+							window.localStorage.setItem('cart_items', JSON.stringify([]));
+						} catch {}
+						window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: 0 } }));
+
+						const redirect = String(json?.redirect_url ?? '').trim() || `/invoice/${this.orderId}`;
+						window.location.assign(redirect);
+					} catch (e) {
+						this.error = String(e?.message ?? '').trim() || 'Pembayaran gagal.';
+					} finally {
+						this.loading = false;
+					}
+				},
+			};
+		};
+	</script>
+</Layout>
+

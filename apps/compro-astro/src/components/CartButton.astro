@@ -5,6 +5,7 @@ type Props = {
 };
 
 const { cartCount = 0, href = '/keranjang' } = Astro.props as Props;
+const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 const safeCount = Number.isFinite(cartCount) ? Math.max(0, Math.trunc(cartCount)) : 0;
 const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
 ---
@@ -48,9 +49,22 @@ const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
 	</a>
 </div>
 
-<script is:inline data-astro-rerun>
+<script is:inline data-astro-rerun define:vars={{ CMS_URL }}>
 	(function () {
 		const KEY = 'cart_items';
+		const resolveCmsBase = () => {
+			const raw = String(CMS_URL || '').trim().replace(/\/$/, '');
+			if (!raw) return '';
+			try {
+				const u = new URL(raw);
+				const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+				if (isLoopback) u.hostname = window.location.hostname;
+				return u.origin;
+			} catch {
+				return raw;
+			}
+		};
+		const CMS_BASE = resolveCmsBase();
 		const AUTH_KEYS = ['token_pelanggan', 'id_pelanggan', 'user'];
 		const authEls = Array.from(document.querySelectorAll('[data-cart-auth]'));
 		const badges = Array.from(document.querySelectorAll('[data-cart-badge]'));
@@ -71,6 +85,13 @@ const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
 			} catch {
 				return false;
 			}
+		};
+
+		const getAuth = () => {
+			const token = String(window.localStorage.getItem('token_pelanggan') || '').trim();
+			const pelangganId = String(window.localStorage.getItem('id_pelanggan') || '').trim();
+			const id = Number(pelangganId || '0');
+			return { token, id: Number.isFinite(id) && id > 0 ? String(Math.trunc(id)) : '' };
 		};
 
 		const applyAuthVisibility = () => {
@@ -95,12 +116,7 @@ const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
 
 		const computeCount = () => {
 			const items = readItems();
-			let sum = 0;
-			for (const it of items) {
-				const q = Number(it?.qty ?? 0);
-				if (Number.isFinite(q) && q > 0) sum += Math.trunc(q);
-			}
-			return sum;
+			return Array.isArray(items) ? items.length : 0;
 		};
 
 		const formatCount = (n) => (n > 99 ? '99+' : String(n));
@@ -120,25 +136,51 @@ const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
 			}
 		};
 
-		const ok = applyAuthVisibility();
-		if (ok) apply(computeCount());
+		const fetchServerCount = async () => {
+			if (!CMS_BASE) return null;
+			const auth = getAuth();
+			if (!auth.id && !auth.token) return null;
+
+			const res = await fetch(`${CMS_BASE}/api/cart`, {
+				method: 'GET',
+				headers: {
+					...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+					...(auth.id ? { 'X-Pelanggan-Id': auth.id } : {}),
+				},
+			}).catch(() => null);
+			const json = res ? await res.json().catch(() => null) : null;
+			if (!res || !res.ok || !json?.ok) return null;
+
+			const items = Array.isArray(json?.data?.items) ? json.data.items : [];
+			return Math.max(0, Math.trunc(items.length));
+		};
+
+		let refreshTimer = null;
+		const refresh = () => {
+			if (refreshTimer) window.clearTimeout(refreshTimer);
+			refreshTimer = window.setTimeout(async () => {
+				if (!applyAuthVisibility()) return;
+				const serverCount = await fetchServerCount();
+				if (Number.isFinite(serverCount)) apply(serverCount);
+				else apply(computeCount());
+			}, 50);
+		};
+
+		refresh();
 
 		window.addEventListener('cart:updated', (e) => {
-			if (!applyAuthVisibility()) return;
-			const c = Number(e?.detail?.count ?? NaN);
-			if (Number.isFinite(c)) apply(Math.max(0, Math.trunc(c)));
-			else apply(computeCount());
+			void e;
+			refresh();
 		});
 
 		window.addEventListener('storage', (e) => {
 			if (e.key && AUTH_KEYS.includes(e.key)) {
-				const ok = applyAuthVisibility();
-				if (ok) apply(computeCount());
+				refresh();
 				return;
 			}
-			if (e.key !== KEY) return;
-			if (!applyAuthVisibility()) return;
-			apply(computeCount());
+			if (e.key === KEY) refresh();
 		});
+
+		window.addEventListener('focus', refresh);
 	})();
 </script>

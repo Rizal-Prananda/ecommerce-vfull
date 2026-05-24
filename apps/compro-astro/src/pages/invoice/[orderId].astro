@@ -1,0 +1,185 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+export const prerender = false;
+
+const { orderId } = Astro.params as { orderId?: string };
+const safeOrderId = String(orderId ?? '').trim();
+
+type InvoiceItem = {
+	id_item: number;
+	title: string | null;
+	size: string | null;
+	unit_price: number;
+	qty: number;
+	line_total: number;
+};
+
+let found = false;
+let createdAt = '';
+let status = '';
+let items: InvoiceItem[] = [];
+let subtotal = 0;
+let shipping = 10000;
+let total = 0;
+let canShow = true;
+
+const formatRupiah = (n: number) => `Rp ${Math.max(0, Math.trunc(n)).toLocaleString('id-ID')}`;
+
+if (safeOrderId) {
+	let db: Database.Database | null = null;
+	try {
+		const __dirname = path.dirname(fileURLToPath(import.meta.url));
+		const dbPath = path.resolve(__dirname, '../../../../cms-laravel/database/database.sqlite');
+		db = new Database(dbPath);
+		db.pragma('journal_mode = WAL');
+		db.pragma('foreign_keys = ON');
+
+		const orderRow = db
+			.prepare(
+				`
+				SELECT id_order, order_no, status, total, createdAt
+				FROM Orders
+				WHERE order_no = ?
+				LIMIT 1
+			`
+			)
+			.get(safeOrderId) as { id_order?: unknown; status?: unknown; total?: unknown; createdAt?: unknown } | undefined;
+
+		const idOrder = Number(orderRow?.id_order ?? 0);
+		if (Number.isFinite(idOrder) && idOrder > 0) {
+			found = true;
+			status = String(orderRow?.status ?? '');
+			total = Number(orderRow?.total ?? 0) || 0;
+			createdAt = String(orderRow?.createdAt ?? '');
+			canShow = String(status || '').toUpperCase() === 'PAID';
+
+			items = db
+				.prepare(
+					`
+					SELECT id_item, title, size, unit_price, qty, line_total
+					FROM OrderItems
+					WHERE id_order = ?
+					ORDER BY id_item ASC
+				`
+				)
+				.all(idOrder) as InvoiceItem[];
+
+			subtotal = items.reduce((sum, it) => sum + (Number(it?.line_total ?? 0) || 0), 0);
+			if (items.length === 0) shipping = 0;
+		}
+	} catch {
+		found = false;
+	} finally {
+		try {
+			db?.close();
+		} catch {}
+	}
+}
+---
+
+<Layout title={`Invoice ${safeOrderId || ''}`.trim()}>
+	<main class="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-900 md:px-8">
+		<div class="mx-auto w-full max-w-[720px]">
+			<div class="rounded-2xl border border-zinc-100 bg-white p-8 shadow-sm">
+				{found && canShow ? (
+					<>
+						<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+							<div>
+								<div class="text-2xl font-bold text-zinc-900">Invoice</div>
+								<div class="mt-1 text-sm text-zinc-500">
+									Order ID: <span class="font-semibold text-zinc-900">{safeOrderId}</span>
+								</div>
+								{createdAt ? <div class="mt-1 text-sm text-zinc-500">Tanggal: {createdAt}</div> : null}
+							</div>
+							<div class="mt-2 inline-flex w-fit items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-900 sm:mt-0">
+								{String(status || 'PAID').toUpperCase()}
+							</div>
+						</div>
+
+						<div class="mt-6 border-t border-zinc-100 pt-6">
+							<div class="text-sm font-semibold text-zinc-900">Items</div>
+							<div class="mt-4 space-y-3">
+								{items.length ? (
+									items.map((it) => (
+										<div class="flex items-start justify-between gap-4 rounded-xl border border-zinc-100 bg-zinc-50/40 p-4">
+											<div class="min-w-0">
+												<div class="truncate text-sm font-semibold text-zinc-900">{it.title || 'Produk'}</div>
+												<div class="mt-1 text-xs text-zinc-500">
+													{it.size ? `Variant: ${it.size} • ` : ''}Qty: {it.qty}
+												</div>
+												<div class="mt-2 text-xs text-zinc-500">{formatRupiah(Number(it.unit_price || 0))} / item</div>
+											</div>
+											<div class="text-right text-sm font-semibold text-zinc-900">{formatRupiah(Number(it.line_total || 0))}</div>
+										</div>
+									))
+								) : (
+									<div class="text-sm text-zinc-500">Tidak ada item.</div>
+								)}
+							</div>
+						</div>
+
+						<div class="mt-6 border-t border-zinc-100 pt-6">
+							<div class="space-y-2 text-sm">
+								<div class="flex items-center justify-between">
+									<div class="text-zinc-500">Subtotal</div>
+									<div class="font-medium text-zinc-900">{formatRupiah(subtotal)}</div>
+								</div>
+								<div class="flex items-center justify-between">
+									<div class="text-zinc-500">Shipping</div>
+									<div class="font-medium text-zinc-900">{formatRupiah(shipping)}</div>
+								</div>
+								<div class="pt-3 border-t border-zinc-100"></div>
+								<div class="flex items-center justify-between">
+									<div class="text-base font-semibold text-zinc-900">Total</div>
+									<div class="text-base font-bold text-zinc-900">{formatRupiah(total || subtotal + shipping)}</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mt-8 flex flex-col gap-3 sm:flex-row">
+							<a href="/PesananSaya?menu=pesanan" class="inline-flex h-12 items-center justify-center rounded-xl bg-zinc-900 px-6 text-sm font-semibold text-white transition hover:bg-zinc-800 active:scale-95">
+								Lihat Pesanan Saya
+							</a>
+							<a href="/marketplace" class="inline-flex h-12 items-center justify-center rounded-xl border border-zinc-200 bg-white px-6 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50 active:scale-95">
+								Belanja Lagi
+							</a>
+						</div>
+					</>
+				) : found && !canShow ? (
+					<>
+						<div class="text-2xl font-bold text-zinc-900">Menunggu Pembayaran</div>
+						<div class="mt-2 text-sm text-zinc-500">
+							Order ID: <span class="font-semibold text-zinc-900">{safeOrderId || '-'}</span>
+						</div>
+						<div class="mt-8 flex flex-col gap-3 sm:flex-row">
+							<a href={`/pembayaran/${safeOrderId}`} class="inline-flex h-12 items-center justify-center rounded-xl bg-zinc-900 px-6 text-sm font-semibold text-white transition hover:bg-zinc-800 active:scale-95">
+								Lanjutkan Pembayaran
+							</a>
+							<a href="/keranjang" class="inline-flex h-12 items-center justify-center rounded-xl border border-zinc-200 bg-white px-6 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50 active:scale-95">
+								Kembali ke Keranjang
+							</a>
+						</div>
+					</>
+				) : (
+					<>
+						<div class="text-2xl font-bold text-zinc-900">Invoice tidak ditemukan</div>
+						<div class="mt-2 text-sm text-zinc-500">Order ID: <span class="font-semibold text-zinc-900">{safeOrderId || '-'}</span></div>
+						<div class="mt-8 flex flex-col gap-3 sm:flex-row">
+							<a href="/keranjang" class="inline-flex h-12 items-center justify-center rounded-xl bg-zinc-900 px-6 text-sm font-semibold text-white transition hover:bg-zinc-800 active:scale-95">
+								Kembali ke Keranjang
+							</a>
+							<a href="/marketplace" class="inline-flex h-12 items-center justify-center rounded-xl border border-zinc-200 bg-white px-6 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50 active:scale-95">
+								Belanja Lagi
+							</a>
+						</div>
+					</>
+				)}
+			</div>
+		</div>
+	</main>
+</Layout>

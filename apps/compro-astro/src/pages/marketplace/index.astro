@@ -1,4 +1,4 @@
-﻿---
+---
 import Layout from '../../layouts/Layout.astro';
 import MarketplaceHero from '../../components/MarketplaceHero.astro';
 
@@ -31,13 +31,13 @@ type ProductView = Product & {
 	priceValue: number;
 };
 
-const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001';
+const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 const q = (Astro.url.searchParams.get('q') ?? '').trim();
 
 let cmsError: string | null = null;
 let products: Product[] = [];
-let heroDesktopSrc = '/images/default-marketplace-hero.webp';
-let heroMobileSrc = '/images/default-marketplace-hero-mobile.webp';
+let heroDesktopSrc = '/images/default-hero.webp';
+let heroMobileSrc = '/images/default-hero.webp';
 
 try {
 	const base = String(CMS_URL).replace(/\/$/, '');
@@ -593,10 +593,67 @@ const featuredCollections = [
 			};
 		</script>
 
-		<script is:inline data-astro-rerun>
+		<script is:inline data-astro-rerun define:vars={{ CMS_URL }}>
 			window.quickAddModal = (() => {
 				let instance = null;
 				const KEY = 'cart_items';
+				const resolveCmsBase = () => {
+					const raw = String(CMS_URL || '').trim().replace(/\/$/, '');
+					if (!raw) return '';
+					try {
+						const u = new URL(raw);
+						const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+						if (isLoopback) u.hostname = window.location.hostname;
+						return u.origin;
+					} catch {
+						return raw;
+					}
+				};
+				const CMS_BASE = resolveCmsBase();
+
+				const getAuth = () => {
+					const token = String(window.localStorage.getItem('token_pelanggan') || '').trim();
+					const pelangganId = String(window.localStorage.getItem('id_pelanggan') || '').trim();
+					const id = Number(pelangganId || '0');
+					return { token, pelangganId: pelangganId || '', id: Number.isFinite(id) && id > 0 ? String(Math.trunc(id)) : '' };
+				};
+
+				const normalizeForServer = (items) => {
+					const out = [];
+					for (const it of Array.isArray(items) ? items : []) {
+						const productId = Number(it?.product_id ?? 0);
+						if (!Number.isFinite(productId) || productId <= 0) continue;
+						const rawVariantId = it?.variant_id;
+						const variantId = rawVariantId === null || rawVariantId === undefined ? null : Number(rawVariantId);
+						const qty = Math.max(1, Math.trunc(Number(it?.qty ?? 1)));
+						const price = Math.max(0, Math.trunc(Number(it?.price ?? 0)));
+						out.push({
+							product_id: Math.trunc(productId),
+							variant_id: Number.isFinite(variantId) && variantId > 0 ? Math.trunc(variantId) : null,
+							qty,
+							title: String(it?.title ?? '').trim(),
+							image: String(it?.image ?? '').trim(),
+							size: String(it?.size ?? '').trim(),
+							price,
+						});
+					}
+					return out;
+				};
+
+				const syncToServer = (items) => {
+					if (!CMS_BASE) return;
+					const auth = getAuth();
+					if (!auth.id && !auth.token) return;
+					fetch(`${CMS_BASE}/api/cart/sync`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+							...(auth.id ? { 'X-Pelanggan-Id': auth.id } : {}),
+						},
+						body: JSON.stringify({ items: normalizeForServer(items) }),
+					}).catch(() => {});
+				};
 
 				const readItems = () => {
 					try {
@@ -662,21 +719,36 @@ const featuredCollections = [
 					variants: [],
 					selectedSize: null,
 					qty: 1,
-					addSimple(productId, qty) {
+					addSimple(productId, qty, meta = null) {
 						if (!Number.isInteger(productId) || productId <= 0) return;
 						const safeQty = Math.max(1, Math.trunc(Number(qty || 1)));
+						const metaObj = meta && typeof meta === 'object' ? meta : {};
+						const metaTitle = String(metaObj?.title ?? '').trim();
+						const metaImage = String(metaObj?.image ?? '').trim();
+						const metaPriceRaw = Number(metaObj?.price ?? metaObj?.priceValue ?? NaN);
+						const metaPrice = Number.isFinite(metaPriceRaw) ? Math.max(0, Math.trunc(metaPriceRaw)) : null;
+
 						const items = readItems();
 						const idx = items.findIndex((x) => Number(x?.product_id ?? 0) === productId && (x?.variant_id === null || x?.variant_id === undefined));
 						if (idx >= 0) {
 							const prev = Number(items[idx]?.qty ?? 0);
-							items[idx] = { ...items[idx], product_id: productId, variant_id: null, qty: Math.max(1, (Number.isFinite(prev) ? Math.trunc(prev) : 0) + safeQty) };
+							items[idx] = {
+								...items[idx],
+								product_id: productId,
+								variant_id: null,
+								qty: Math.max(1, (Number.isFinite(prev) ? Math.trunc(prev) : 0) + safeQty),
+								title: metaTitle || items[idx]?.title,
+								image: metaImage || items[idx]?.image,
+								price: metaPrice === null ? items[idx]?.price : metaPrice,
+							};
 						} else {
-							items.push({ product_id: productId, variant_id: null, qty: safeQty });
+							items.push({ product_id: productId, variant_id: null, qty: safeQty, title: metaTitle, image: metaImage, price: metaPrice ?? 0 });
 						}
 						writeItems(items);
 						const count = countItems(items);
 						window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count } }));
 						showToast('Berhasil tambah ke keranjang');
+						syncToServer(items);
 					},
 					getSelectedStock() {
 						const v = this.variants.find((x) => Number(x?.id) === Number(this.selectedSize));
@@ -687,6 +759,8 @@ const featuredCollections = [
 						const id = Number(productEl.dataset.productId || '0');
 						const title = String(productEl.dataset.title || '').trim();
 						const price = String(productEl.dataset.price || '').trim();
+						const priceValueRaw = Number(productEl.dataset.priceValue || '0');
+						const priceValue = Number.isFinite(priceValueRaw) ? Math.max(0, Math.trunc(priceValueRaw)) : 0;
 						const image = String(productEl.dataset.image || '').trim();
 
 						let variants = [];
@@ -698,17 +772,18 @@ const featuredCollections = [
 							variants = [];
 						}
 
-						this.product = { id, title, price, image };
+						this.product = { id, title, price, priceValue, image };
 						this.variants = variants
 							.map((x) => ({
 								id: Number(x?.id ?? 0),
 								size: String(x?.size ?? '').trim(),
 								stock: Number(x?.stock ?? 0),
+								price: x?.price === null || x?.price === undefined ? null : Number(x.price),
 							}))
 							.filter((x) => Number.isFinite(x.id) && x.id > 0 && x.size);
 
 						if (!this.variants.length) {
-							this.addSimple(id, 1);
+							this.addSimple(id, 1, { title, image, price: priceValue });
 							return;
 						}
 
@@ -727,23 +802,39 @@ const featuredCollections = [
 
 						const maxQty = Math.max(1, Math.trunc(Number(variant.stock || 0)));
 						const qty = Math.max(1, Math.min(maxQty, Math.trunc(Number(this.qty || 1))));
+						const basePriceRaw = Number(this.product?.priceValue ?? 0);
+						const basePrice = Number.isFinite(basePriceRaw) ? Math.max(0, Math.trunc(basePriceRaw)) : 0;
+						const variantPriceRaw = variant?.price === null || variant?.price === undefined ? NaN : Number(variant.price);
+						const chosenPrice = Number.isFinite(variantPriceRaw) ? Math.max(0, Math.trunc(variantPriceRaw)) : basePrice;
+						const title = String(this.product?.title ?? '').trim();
+						const image = String(this.product?.image ?? '').trim();
+						const sizeLabel = String(variant.size || '').trim();
 
 						const items = readItems();
 						const idx = items.findIndex((x) => Number(x?.variant_id ?? 0) === variantId);
 						if (idx >= 0) {
 							const prev = Number(items[idx]?.qty ?? 0);
 							const next = Math.max(1, Math.min(maxQty, (Number.isFinite(prev) ? Math.trunc(prev) : 0) + qty));
-							items[idx] = { ...items[idx], product_id: productId, variant_id: variantId, qty: next };
+							items[idx] = {
+								...items[idx],
+								product_id: productId,
+								variant_id: variantId,
+								qty: next,
+								title: title || items[idx]?.title,
+								image: image || items[idx]?.image,
+								price: chosenPrice,
+								size: sizeLabel || items[idx]?.size,
+							};
 						} else {
-							items.push({ product_id: productId, variant_id: variantId, qty });
+							items.push({ product_id: productId, variant_id: variantId, qty, title, image, price: chosenPrice, size: sizeLabel });
 						}
 
 						writeItems(items);
 						const count = countItems(items);
 						window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count } }));
 
-						const size = String(variant.size || '').trim();
-						showToast(size ? `Berhasil tambah ukuran ${size}` : 'Berhasil tambah ke keranjang');
+						showToast(sizeLabel ? `Berhasil tambah ukuran ${sizeLabel}` : 'Berhasil tambah ke keranjang');
+						syncToServer(items);
 						this.open = false;
 					},
 				});
@@ -755,10 +846,68 @@ const featuredCollections = [
 			})();
 		</script>
 
-		<script is:inline data-astro-rerun>
+		<script is:inline data-astro-rerun define:vars={{ CMS_URL }}>
 			(function () {
 				const KEY = 'cart_items';
 				const TOAST_ID = 'cart-toast';
+				const resolveCmsBase = () => {
+					const raw = String(CMS_URL || '').trim().replace(/\/$/, '');
+					if (!raw) return '';
+					try {
+						const u = new URL(raw);
+						const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+						if (isLoopback) u.hostname = window.location.hostname;
+						return u.origin;
+					} catch {
+						return raw;
+					}
+				};
+				const CMS_BASE = resolveCmsBase();
+
+				const getAuth = () => {
+					const token = String(window.localStorage.getItem('token_pelanggan') || '').trim();
+					const pelangganId = String(window.localStorage.getItem('id_pelanggan') || '').trim();
+					const id = Number(pelangganId || '0');
+					return { token, pelangganId: pelangganId || '', id: Number.isFinite(id) && id > 0 ? String(Math.trunc(id)) : '' };
+				};
+
+				const normalizeForServer = (items) => {
+					const out = [];
+					for (const it of Array.isArray(items) ? items : []) {
+						const productId = Number(it?.product_id ?? it?.id ?? 0);
+						if (!Number.isFinite(productId) || productId <= 0) continue;
+						const rawVariantId = it?.variant_id ?? null;
+						const variantId = rawVariantId === null || rawVariantId === undefined ? null : Number(rawVariantId);
+						const qty = Math.max(1, Math.trunc(Number(it?.qty ?? 1)));
+						const price = Math.max(0, Math.trunc(Number(it?.price ?? 0)));
+						out.push({
+							product_id: Math.trunc(productId),
+							variant_id: Number.isFinite(variantId) && variantId > 0 ? Math.trunc(variantId) : null,
+							qty,
+							title: String(it?.title ?? '').trim(),
+							image: String(it?.image ?? '').trim(),
+							size: String(it?.size ?? '').trim(),
+							price,
+						});
+					}
+					return out;
+				};
+
+				const syncToServer = (items) => {
+					if (!CMS_BASE) return;
+					const auth = getAuth();
+					if (!auth.id && !auth.token) return;
+					fetch(`${CMS_BASE}/api/cart/sync`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+							...(auth.id ? { 'X-Pelanggan-Id': auth.id } : {}),
+						},
+						body: JSON.stringify({ items: normalizeForServer(items) }),
+					}).catch(() => {});
+				};
+
 				const readItems = () => {
 					try {
 						const raw = window.localStorage.getItem(KEY);
@@ -835,19 +984,32 @@ const featuredCollections = [
 					const id = Number(t.getAttribute('data-cart-id') || '0');
 					if (!Number.isInteger(id) || id <= 0) return;
 
+					const title = String(t.getAttribute('data-cart-title') || '').trim();
+					const image = String(t.getAttribute('data-cart-image') || '').trim();
+					const priceRaw = Number(String(t.getAttribute('data-cart-price') || '').replace(/[^\d]/g, ''));
+					const price = Number.isFinite(priceRaw) ? Math.max(0, Math.trunc(priceRaw)) : 0;
+
 					const items = readItems();
-					const idx = items.findIndex((x) => Number(x?.id) === id);
+					const idx = items.findIndex((x) => Number(x?.product_id ?? x?.id ?? 0) === id && (x?.variant_id === null || x?.variant_id === undefined));
 					if (idx >= 0) {
 						const prev = Number(items[idx]?.qty ?? 0);
-						items[idx] = { id, qty: Math.max(1, (Number.isFinite(prev) ? Math.trunc(prev) : 0) + 1) };
+						items[idx] = {
+							...items[idx],
+							product_id: id,
+							variant_id: null,
+							qty: Math.max(1, (Number.isFinite(prev) ? Math.trunc(prev) : 0) + 1),
+							title: title || items[idx]?.title,
+							image: image || items[idx]?.image,
+							price: price || Number(items[idx]?.price ?? 0),
+						};
 					} else {
-						items.push({ id, qty: 1 });
+						items.push({ product_id: id, variant_id: null, qty: 1, title, image, price });
 					}
 					writeItems(items);
 					const count = countItems(items);
 					window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count } }));
-					const title = String(t.getAttribute('data-cart-title') || '').trim();
 					showToast(title ? `Added “${title}” to cart` : 'Added to cart');
+					syncToServer(items);
 				});
 			})();
 		</script>
@@ -920,6 +1082,5 @@ const featuredCollections = [
 			document.addEventListener('DOMContentLoaded', runReveal);
 		</script>
 
-		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	</main>
 </Layout>

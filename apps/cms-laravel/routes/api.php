@@ -255,6 +255,228 @@ Route::get('/orders', function (Request $request) {
     return response()->json(['ok' => true, 'data' => $rows]);
 });
 
+Route::get('/cart', function (Request $request) {
+    $header = $request->header('Authorization', '');
+    $idHeader = trim((string) $request->header('X-Pelanggan-Id', ''));
+    $idFromHeader = (int) $idHeader;
+
+    $id = 0;
+    if ($idFromHeader > 0) {
+        $id = $idFromHeader;
+    } else {
+        if (preg_match('/^Bearer\s+(.+)$/i', (string) $header, $m)) {
+            $token = trim((string) ($m[1] ?? ''));
+            if (preg_match('/^pelanggan[:\-](\d+)$/i', $token, $m2)) {
+                $id = (int) ($m2[1] ?? 0);
+            } elseif (ctype_digit($token)) {
+                $id = (int) $token;
+            }
+        }
+    }
+
+    if ($id <= 0) {
+        return response()->json(['ok' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $conn = DB::connection('sqlite');
+
+    try {
+        $schema = $conn->getSchemaBuilder();
+        $hasOrders = $schema->hasTable('Orders');
+        $hasItems = $schema->hasTable('OrderItems');
+    } catch (\Throwable $e) {
+        $hasOrders = false;
+        $hasItems = false;
+    }
+
+    if (!$hasOrders || !$hasItems) {
+        return response()->json(['ok' => true, 'data' => null]);
+    }
+
+    $order = $conn->table('Orders')
+        ->where('id_pelanggan', $id)
+        ->where('status', 'UNPAID')
+        ->orderByDesc('createdAt')
+        ->first();
+
+    if (!$order) {
+        return response()->json(['ok' => true, 'data' => null]);
+    }
+
+    $rows = $conn->table('OrderItems')
+        ->where('id_order', (int) $order->id_order)
+        ->where(function ($q) {
+            $q->where('status', 'UNPAID')->orWhereNull('status');
+        })
+        ->orderBy('id_item')
+        ->get([
+            'product_id',
+            'variant_id',
+            'qty',
+            'title',
+            'image',
+            'unit_price',
+            'size',
+        ]);
+
+    $items = [];
+    $subtotal = 0;
+    foreach ($rows as $r) {
+        $productId = (int) ($r->product_id ?? 0);
+        $variantId = $r->variant_id === null ? null : (int) $r->variant_id;
+        $qty = max(1, (int) ($r->qty ?? 1));
+        $price = max(0, (int) ($r->unit_price ?? 0));
+        $line = $price * $qty;
+        $subtotal += $line;
+
+        $items[] = [
+            'product_id' => $productId,
+            'variant_id' => $variantId,
+            'qty' => $qty,
+            'title' => (string) ($r->title ?? ''),
+            'image' => (string) ($r->image ?? ''),
+            'price' => $price,
+            'size' => (string) ($r->size ?? ''),
+        ];
+    }
+
+    $discount = (int) floor(max(0, $subtotal) * 0.1);
+    $deliveryFee = count($items) ? 10000 : 0;
+    $total = max(0, (int) $subtotal - $discount + $deliveryFee);
+
+    return response()->json([
+        'ok' => true,
+        'data' => [
+            'id_order' => (int) $order->id_order,
+            'id_pelanggan' => (int) $order->id_pelanggan,
+            'status' => (string) ($order->status ?? 'UNPAID'),
+            'subtotal' => (int) $subtotal,
+            'discount' => (int) $discount,
+            'delivery_fee' => (int) $deliveryFee,
+            'total' => (int) $total,
+            'items' => $items,
+        ],
+    ]);
+});
+
+Route::post('/cart/sync', function (Request $request) {
+    $header = $request->header('Authorization', '');
+    $idHeader = trim((string) $request->header('X-Pelanggan-Id', ''));
+    $idFromHeader = (int) $idHeader;
+
+    $id = 0;
+    if ($idFromHeader > 0) {
+        $id = $idFromHeader;
+    } else {
+        if (preg_match('/^Bearer\s+(.+)$/i', (string) $header, $m)) {
+            $token = trim((string) ($m[1] ?? ''));
+            if (preg_match('/^pelanggan[:\-](\d+)$/i', $token, $m2)) {
+                $id = (int) ($m2[1] ?? 0);
+            } elseif (ctype_digit($token)) {
+                $id = (int) $token;
+            }
+        }
+    }
+
+    if ($id <= 0) {
+        return response()->json(['ok' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $validated = $request->validate([
+        'items' => ['required', 'array'],
+        'items.*.product_id' => ['required', 'integer', 'min:1'],
+        'items.*.variant_id' => ['nullable', 'integer', 'min:1'],
+        'items.*.qty' => ['required', 'integer', 'min:1'],
+        'items.*.title' => ['nullable', 'string', 'max:255'],
+        'items.*.image' => ['nullable', 'string', 'max:2048'],
+        'items.*.size' => ['nullable', 'string', 'max:50'],
+        'items.*.price' => ['nullable', 'integer', 'min:0'],
+    ]);
+
+    $itemsIn = (array) ($validated['items'] ?? []);
+    $now = now()->toDateTimeString();
+    $conn = DB::connection('sqlite');
+
+    $schema = $conn->getSchemaBuilder();
+    if (!$schema->hasTable('Orders') || !$schema->hasTable('OrderItems')) {
+        return response()->json(['ok' => false, 'message' => 'Cart table not ready. Run migration first.'], 500);
+    }
+
+    $out = $conn->transaction(function () use ($conn, $id, $itemsIn, $now) {
+        $order = $conn->table('Orders')
+            ->where('id_pelanggan', $id)
+            ->where('status', 'UNPAID')
+            ->orderByDesc('createdAt')
+            ->first();
+
+        if (!$order) {
+            $orderId = (int) $conn->table('Orders')->insertGetId([
+                'id_pelanggan' => $id,
+                'order_no' => null,
+                'status' => 'UNPAID',
+                'total' => 0,
+                'createdAt' => $now,
+            ], 'id_order');
+
+            $order = (object) ['id_order' => $orderId, 'id_pelanggan' => $id, 'status' => 'UNPAID'];
+        }
+
+        $orderId = (int) $order->id_order;
+
+        $conn->table('OrderItems')->where('id_order', $orderId)->delete();
+
+        $rows = [];
+        $subtotal = 0;
+        foreach ($itemsIn as $it) {
+            $productId = (int) ($it['product_id'] ?? 0);
+            $variantId = $it['variant_id'] === null ? null : (int) ($it['variant_id'] ?? 0);
+            $qty = max(1, (int) ($it['qty'] ?? 1));
+            $price = max(0, (int) ($it['price'] ?? 0));
+            $line = $price * $qty;
+            $subtotal += $line;
+
+            $rows[] = [
+                'id_order' => $orderId,
+                'status' => 'UNPAID',
+                'product_id' => $productId,
+                'variant_id' => $variantId,
+                'title' => (string) ($it['title'] ?? ''),
+                'size' => (string) ($it['size'] ?? ''),
+                'image' => (string) ($it['image'] ?? ''),
+                'unit_price' => $price,
+                'qty' => $qty,
+                'line_total' => $line,
+                'createdAt' => $now,
+                'updatedAt' => $now,
+            ];
+        }
+
+        if (count($rows)) {
+            $conn->table('OrderItems')->insert($rows);
+        }
+
+        $discount = (int) floor(max(0, $subtotal) * 0.1);
+        $deliveryFee = count($rows) ? 10000 : 0;
+        $total = max(0, (int) $subtotal - $discount + $deliveryFee);
+
+        $conn->table('Orders')->where('id_order', $orderId)->update([
+            'total' => $total,
+        ]);
+
+        return [
+            'id_order' => $orderId,
+            'id_pelanggan' => $id,
+            'status' => 'UNPAID',
+            'subtotal' => (int) $subtotal,
+            'discount' => (int) $discount,
+            'delivery_fee' => (int) $deliveryFee,
+            'total' => (int) $total,
+        ];
+    });
+
+    return response()->json(['ok' => true, 'data' => $out]);
+});
+
 Route::post('/user/update', function (Request $request) {
     $header = $request->header('Authorization', '');
     $idHeader = trim((string) $request->header('X-Pelanggan-Id', ''));

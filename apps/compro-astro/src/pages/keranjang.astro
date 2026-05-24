@@ -1,38 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
-type CartItem = {
-	id: number;
-	name: string;
-	variant: string;
-	price: number;
-	qty: number;
-	image: string;
-};
-
-const cartItems: CartItem[] = [
-	{
-		id: 1,
-		name: 'Seblak Ceker Super Pedas',
-		variant: 'Level 3, Extra Telor',
-		price: 25000,
-		qty: 2,
-		image: 'https://picsum.photos/80'
-	},
-	{
-		id: 2,
-		name: 'Bakso Aci Kuah Pedas',
-		variant: 'Level 5',
-		price: 18000,
-		qty: 1,
-		image: 'https://picsum.photos/80'
-	}
-];
-
-const formatRupiah = (n: number) => `Rp ${Math.max(0, Math.trunc(n)).toLocaleString('id-ID')}`;
-const subtotal = cartItems.reduce((sum, it) => sum + it.price * it.qty, 0);
-const ongkir = cartItems.length ? 10000 : 0;
-const total = subtotal + ongkir;
+const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 ---
 
 <Layout title="Keranjang Belanja">
@@ -40,102 +9,426 @@ const total = subtotal + ongkir;
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-	<main class="min-h-screen bg-[#F8FAFC] pb-24 text-gray-800">
-		<div class="mx-auto max-w-7xl px-4 py-8 lg:px-8 [font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe_UI,Roboto,Helvetica,Arial]">
+	<main class="min-h-screen bg-zinc-50 pb-24 text-zinc-900">
+		<div
+			x-data="cartPage()"
+			x-init="init()"
+			class="mx-auto max-w-[1120px] px-6 py-8 md:px-8 [font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe_UI,Roboto,Helvetica,Arial]"
+		>
 			<header class="mb-6">
-				<div class="text-2xl font-semibold text-gray-900">Keranjang Belanja</div>
-				<div class="mt-1 text-sm text-gray-500">{cartItems.length} item</div>
+				<div class="text-3xl font-bold text-zinc-900">Keranjang Belanja</div>
+				<div class="mt-1 text-sm text-zinc-500" x-text="totalItems + ' item'"></div>
 			</header>
 
-			{
-				cartItems.length === 0 ? (
-					<section class="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
-						<div class="flex flex-col items-center justify-center py-16 text-center">
-							<svg viewBox="0 0 24 24" class="h-16 w-16 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5">
-								<circle cx="9" cy="21" r="1" />
-								<circle cx="20" cy="21" r="1" />
-								<path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.65 16H19a2 2 0 0 0 2-1.65L23 6H6" />
-							</svg>
-							<div class="mt-4 text-lg font-semibold text-gray-900">Keranjang kamu kosong</div>
-							<div class="mt-1 text-sm text-gray-500">Yuk, mulai belanja dan isi keranjangmu!</div>
-							<a href="/#home" class="mt-6 inline-flex rounded-xl bg-[#1A56DB] px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#1E40AF] active:scale-95">
-								Mulai Belanja
-							</a>
+			<div :class="items.length > 0 ? 'grid grid-cols-1 gap-8 lg:grid-cols-3' : 'grid grid-cols-1'">
+				<section
+					x-show="items.length === 0"
+					class="col-span-full flex min-h-[60vh] w-full items-center justify-center rounded-2xl border border-zinc-100 bg-white p-10 text-center shadow-sm"
+				>
+					<div class="flex max-w-md flex-col items-center">
+						<svg viewBox="0 0 24 24" class="h-28 w-28 text-zinc-200" fill="none" stroke="currentColor" stroke-width="1.25" aria-hidden="true">
+							<circle cx="9" cy="21" r="1" />
+							<circle cx="20" cy="21" r="1" />
+							<path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.65 16H19a2 2 0 0 0 2-1.65L23 6H6" />
+						</svg>
+						<div class="mt-5 text-xl font-semibold text-zinc-900">Keranjang kamu masih kosong</div>
+						<div class="mt-2 text-sm text-zinc-500">Produk keren nunggu kamu checkout nih!</div>
+						<a
+							href="/marketplace"
+							class="mt-7 inline-flex h-12 items-center justify-center rounded-xl bg-zinc-900 px-8 text-sm font-semibold text-white transition hover:bg-zinc-800 active:scale-95"
+						>
+							Mulai Belanja
+						</a>
+					</div>
+				</section>
+
+				<section x-show="items.length > 0" class="lg:col-span-2">
+					<div class="rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm">
+						<div class="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 border-b border-zinc-100 pb-3 text-sm font-medium text-zinc-500">
+							<div>Product Code</div>
+							<div class="text-center">Quantity</div>
+							<div class="text-right">Total</div>
+							<div class="text-right">Action</div>
 						</div>
-					</section>
-				) : (
-					<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
-						<section class="space-y-4">
-							{cartItems.map((it) => (
-								<div class="flex gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-									<img src={it.image} alt={it.name} class="h-20 w-20 rounded-xl object-cover" loading="lazy" />
-									<div class="min-w-0 flex-1">
-										<div class="truncate text-sm font-semibold text-gray-900">{it.name}</div>
-										<div class="mt-0.5 text-xs text-gray-500">{it.variant}</div>
-										<div class="mt-2 text-sm font-semibold text-[#1A56DB]">{formatRupiah(it.price)}</div>
+
+						<div>
+							<template x-for="it in items" :key="keyOf(it)">
+								<div class="grid grid-cols-[2fr_1fr_1fr_auto] items-center gap-4 border-b border-zinc-50 py-4 last:border-0">
+									<div class="flex min-w-0 items-center gap-4">
+										<img
+											:src="it.image || ''"
+											:alt="it.title || `Produk #${it.product_id}`"
+											class="h-16 w-16 rounded-lg object-cover bg-zinc-100"
+											loading="lazy"
+										/>
+										<div class="min-w-0">
+											<div class="text-sm font-semibold text-zinc-900" x-text="formatCode(it)"></div>
+											<div class="mt-0.5 truncate text-sm font-medium text-zinc-900" x-text="it.title || `Produk #${it.product_id}`"></div>
+											<div class="mt-0.5 text-sm text-zinc-500" x-text="it.size || ''"></div>
+										</div>
 									</div>
 
-									<div class="flex items-center gap-2">
-										<button type="button" class="rounded-lg border border-gray-200 p-1.5 transition hover:bg-gray-50 active:scale-95" aria-label="Kurangi">
-											<svg viewBox="0 0 24 24" class="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+									<div class="flex items-center justify-center gap-2">
+										<button
+											type="button"
+											class="grid h-8 w-8 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 active:scale-95"
+											@click="updateQty(keyOf(it), -1)"
+											aria-label="Kurangi"
+										>
+											<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
 												<path d="M5 12h14" />
 											</svg>
 										</button>
-										<div class="w-8 text-center text-sm font-medium text-gray-900">{it.qty}</div>
-										<button type="button" class="rounded-lg border border-gray-200 p-1.5 transition hover:bg-gray-50 active:scale-95" aria-label="Tambah">
-											<svg viewBox="0 0 24 24" class="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+										<div class="w-8 text-center text-sm font-semibold tabular-nums text-zinc-900" x-text="it.qty"></div>
+										<button
+											type="button"
+											class="grid h-8 w-8 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 active:scale-95"
+											@click="updateQty(keyOf(it), 1)"
+											aria-label="Tambah"
+										>
+											<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
 												<path d="M12 5v14" />
 												<path d="M5 12h14" />
 											</svg>
 										</button>
 									</div>
 
-									<button type="button" class="ml-auto text-gray-400 transition hover:text-red-500 active:scale-95" aria-label="Hapus">
-										<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-											<path d="M3 6h18" />
-											<path d="M8 6V4h8v2" />
-											<path d="M19 6l-1 14H6L5 6" />
-											<path d="M10 11v6" />
-											<path d="M14 11v6" />
-										</svg>
-									</button>
+									<div class="text-right font-semibold text-zinc-900" x-text="formatRupiah((Number(it.price) || 0) * (Number(it.qty) || 0))"></div>
+
+									<div class="flex justify-end">
+										<button type="button" class="text-zinc-400 transition hover:text-red-600 active:scale-95" @click="removeItem(keyOf(it))" aria-label="Hapus">
+											<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M3 6h18" />
+												<path d="M8 6V4h8v2" />
+												<path d="M19 6l-1 14H6L5 6" />
+												<path d="M10 11v6" />
+												<path d="M14 11v6" />
+											</svg>
+										</button>
+									</div>
 								</div>
-							))}
-						</section>
+							</template>
+						</div>
 
-						<aside class="h-fit rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:sticky lg:top-24">
-							<div class="text-base font-semibold text-gray-900">Ringkasan Pesanan</div>
-							<div class="my-4 border-b border-gray-100"></div>
-
-							<div class="space-y-3 text-sm">
-								<div class="flex items-center justify-between">
-									<div class="text-gray-600">Subtotal</div>
-									<div class="font-medium text-gray-900">{formatRupiah(subtotal)}</div>
-								</div>
-								<div class="flex items-center justify-between">
-									<div class="text-gray-600">Ongkir</div>
-									<div class="font-medium text-gray-900">{formatRupiah(ongkir)}</div>
-								</div>
-
-								<div class="my-4 border-b border-gray-100"></div>
-
-								<div class="flex items-center justify-between">
-									<div class="text-base font-semibold text-gray-900">Total</div>
-									<div class="text-base font-semibold text-[#1A56DB]">{formatRupiah(total)}</div>
-								</div>
-							</div>
-
-							<button
-								type="button"
-								class="mt-6 w-full rounded-xl bg-[#1A56DB] py-3 text-sm font-semibold text-white shadow-sm shadow-blue-500/20 transition-all hover:bg-[#1E40AF] hover:shadow-md active:scale-95"
-							>
-								Checkout
-							</button>
-							<div class="mt-3 text-center text-xs text-gray-500">Dengan checkout, kamu setuju dengan S&amp;K kami</div>
-						</aside>
 					</div>
-				)
-			}
+				</section>
+
+				<aside x-show="items.length > 0" class="h-fit rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+					<div class="text-lg font-semibold text-zinc-900">Order Summery</div>
+
+					<div class="mt-4 flex gap-2">
+						<input
+							type="text"
+							class="h-10 flex-1 rounded-lg border border-zinc-200 px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
+							placeholder="Voucher code"
+							x-model="voucherCode"
+						/>
+						<button type="button" class="h-10 rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50 active:scale-95" @click="applyVoucher()">
+							Apply
+						</button>
+					</div>
+
+					<div class="mt-5 space-y-3 text-sm">
+						<div class="flex items-center justify-between">
+							<div class="text-zinc-500">Sub Total</div>
+							<div class="font-medium text-zinc-900" x-text="formatRupiah(subtotal)"></div>
+						</div>
+						<div class="flex items-center justify-between">
+							<div class="text-zinc-500">Discount (10%)</div>
+							<div class="font-medium text-zinc-900" x-text="formatRupiah(discount)"></div>
+						</div>
+						<div class="flex items-center justify-between">
+							<div class="text-zinc-500">Delivery fee</div>
+							<div class="font-medium text-zinc-900" x-text="formatRupiah(ongkir)"></div>
+						</div>
+
+						<div class="pt-4 border-t border-zinc-100"></div>
+
+						<div class="flex items-center justify-between">
+							<div class="text-base font-semibold text-zinc-900">Total</div>
+							<div class="text-base font-bold text-zinc-900" x-text="formatRupiah(grandTotal)"></div>
+						</div>
+					</div>
+
+					<div class="mt-4 flex items-start gap-2">
+						<svg viewBox="0 0 24 24" class="mt-0.5 h-4 w-4 flex-none text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d="M12 5v14" />
+							<path d="M5 12h14" />
+						</svg>
+						<div class="text-xs text-zinc-500">10 Day Limited Warranty...</div>
+					</div>
+
+					<button
+						type="button"
+						class="mt-6 h-12 w-full rounded-xl bg-zinc-900 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-zinc-300"
+						:disabled="checkoutLoading || items.length === 0"
+						@click="checkoutNow()"
+					>
+						<span x-text="checkoutLoading ? 'Processing...' : 'Checkout Now'"></span>
+					</button>
+				</aside>
+			</div>
 		</div>
 	</main>
+
+	<script is:inline define:vars={{ CMS_URL }}>
+		window.cartPage = function cartPage() {
+			const KEY = 'cart_items';
+			const resolveCmsBase = () => {
+				const raw = String(CMS_URL || '').trim().replace(/\/$/, '');
+				if (!raw) return '';
+				try {
+					const u = new URL(raw);
+					const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+					if (isLoopback) u.hostname = window.location.hostname;
+					return u.origin;
+				} catch {
+					return raw;
+				}
+			};
+			const CMS_BASE = resolveCmsBase();
+
+			return {
+				KEY,
+				items: [],
+				voucherCode: '',
+				appliedVoucher: '',
+				checkoutLoading: false,
+				checkoutError: '',
+				formatRupiah(n) {
+					const safe = Number.isFinite(Number(n)) ? Math.max(0, Math.trunc(Number(n))) : 0;
+					return `Rp ${safe.toLocaleString('id-ID')}`;
+				},
+				readItems() {
+					try {
+						const raw = window.localStorage.getItem(KEY);
+						if (!raw) return [];
+						const arr = JSON.parse(raw);
+						return Array.isArray(arr) ? arr : [];
+					} catch {
+						return [];
+					}
+				},
+				normalizeItems(items) {
+					const out = [];
+					for (const it of items) {
+						const productId = Number(it?.product_id ?? it?.productId ?? 0);
+						if (!Number.isFinite(productId) || productId <= 0) continue;
+
+						const rawVariantId = it?.variant_id ?? it?.variantId ?? null;
+						const variantId = rawVariantId === null || rawVariantId === undefined ? null : Number(rawVariantId);
+						const qty = Math.max(1, Math.trunc(Number(it?.qty ?? 1)));
+
+						const title = String(it?.title ?? it?.name ?? '').trim();
+						const image = String(it?.image ?? it?.image_url ?? '').trim();
+						const price = Number(it?.price ?? 0);
+						const size = String(it?.size ?? it?.variant ?? it?.variant_label ?? '').trim();
+
+						out.push({
+							product_id: productId,
+							variant_id: Number.isFinite(variantId) && variantId > 0 ? variantId : null,
+							qty,
+							title,
+							image,
+							price: Number.isFinite(price) ? Math.max(0, Math.trunc(price)) : 0,
+							size,
+						});
+					}
+					return out;
+				},
+				writeItems(items) {
+					try {
+						window.localStorage.setItem(KEY, JSON.stringify(items));
+					} catch {}
+				},
+				getAuth() {
+					const token = String(window.localStorage.getItem('token_pelanggan') || '').trim();
+					const pelangganId = String(window.localStorage.getItem('id_pelanggan') || '').trim();
+					const id = Number(pelangganId || '0');
+					return { token, pelangganId: pelangganId || '', id: Number.isFinite(id) && id > 0 ? String(Math.trunc(id)) : '' };
+				},
+				normalizeForServer(items) {
+					const out = [];
+					for (const it of Array.isArray(items) ? items : []) {
+						const productId = Number(it?.product_id ?? it?.productId ?? 0);
+						if (!Number.isFinite(productId) || productId <= 0) continue;
+						const rawVariantId = it?.variant_id ?? it?.variantId ?? null;
+						const variantId = rawVariantId === null || rawVariantId === undefined ? null : Number(rawVariantId);
+						const qty = Math.max(1, Math.trunc(Number(it?.qty ?? 1)));
+						const title = String(it?.title ?? it?.name ?? '').trim();
+						const image = String(it?.image ?? it?.image_url ?? '').trim();
+						const price = Math.max(0, Math.trunc(Number(it?.price ?? 0)));
+						const size = String(it?.size ?? it?.variant ?? it?.variant_label ?? '').trim();
+						out.push({
+							product_id: Math.trunc(productId),
+							variant_id: Number.isFinite(variantId) && variantId > 0 ? Math.trunc(variantId) : null,
+							qty,
+							title,
+							image,
+							size,
+							price,
+						});
+					}
+					return out;
+				},
+				async syncToServer() {
+					if (!CMS_BASE) return;
+					const auth = this.getAuth();
+					if (!auth.id && !auth.token) return;
+					const payload = { items: this.normalizeForServer(this.items) };
+					await fetch(`${CMS_BASE}/api/cart/sync`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+							...(auth.id ? { 'X-Pelanggan-Id': auth.id } : {}),
+						},
+						body: JSON.stringify(payload),
+					}).catch(() => null);
+				},
+				async loadFromServer() {
+					if (!CMS_BASE) return false;
+					const auth = this.getAuth();
+					if (!auth.id && !auth.token) return false;
+					const res = await fetch(`${CMS_BASE}/api/cart`, {
+						method: 'GET',
+						headers: {
+							...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+							...(auth.id ? { 'X-Pelanggan-Id': auth.id } : {}),
+						},
+					}).catch(() => null);
+					const json = res ? await res.json().catch(() => null) : null;
+					const serverItems = Array.isArray(json?.data?.items) ? json.data.items : null;
+					if (!res || !res.ok || !json?.ok || !serverItems) return false;
+
+					const normalized = this.normalizeItems(serverItems);
+					this.items = normalized;
+					this.writeItems(normalized);
+					window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: this.countQty(normalized) } }));
+					return true;
+				},
+				countQty(items) {
+					let sum = 0;
+					for (const it of items) sum += Math.max(0, Math.trunc(Number(it?.qty ?? 0)));
+					return sum;
+				},
+				keyOf(it) {
+					return `${String(it.product_id)}:${it.variant_id === null ? 'null' : String(it.variant_id)}`;
+				},
+				formatCode(it) {
+					const p = Number(it?.product_id ?? 0);
+					const v = it?.variant_id === null || it?.variant_id === undefined ? null : Number(it.variant_id);
+					if (Number.isFinite(v) && v > 0) return `PV-${v}`;
+					if (Number.isFinite(p) && p > 0) return `P-${p}`;
+					return '—';
+				},
+				get totalItems() {
+					return this.countQty(this.items);
+				},
+				get subtotal() {
+					let sum = 0;
+					for (const it of this.items) sum += Math.max(0, Number(it.price || 0)) * Math.max(0, Number(it.qty || 0));
+					return Math.max(0, Math.trunc(sum));
+				},
+				get discount() {
+					return Math.max(0, Math.trunc(this.subtotal * 0.1));
+				},
+				get grandTotal() {
+					return Math.max(0, this.subtotal - this.discount + this.ongkir);
+				},
+				get ongkir() {
+					return this.items.length ? 10000 : 0;
+				},
+				get total() {
+					return Math.max(0, this.subtotal + this.ongkir);
+				},
+				load() {
+					this.items = this.normalizeItems(this.readItems());
+				},
+				persist() {
+					this.writeItems(this.items);
+					const count = this.countQty(this.items);
+					window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count } }));
+					void this.syncToServer();
+				},
+				applyVoucher() {
+					this.appliedVoucher = String(this.voucherCode || '').trim();
+				},
+				updateQty(cartKey, delta) {
+					const idx = this.items.findIndex((x) => this.keyOf(x) === cartKey);
+					if (idx < 0) return;
+					const cur = Math.max(1, Math.trunc(Number(this.items[idx]?.qty ?? 1)));
+					const nextQty = Math.max(1, cur + Math.trunc(Number(delta || 0)));
+					this.items = this.items.map((x, i) => (i === idx ? { ...x, qty: nextQty } : x));
+					this.persist();
+				},
+				removeItem(cartKey) {
+					this.items = this.items.filter((x) => this.keyOf(x) !== cartKey);
+					this.persist();
+				},
+				async checkoutNow() {
+					if (this.checkoutLoading) return;
+					if (!Array.isArray(this.items) || this.items.length === 0) return;
+
+					this.checkoutLoading = true;
+					this.checkoutError = '';
+
+					try {
+						const auth = this.getAuth();
+						let userName = '';
+						try {
+							const raw = window.localStorage.getItem('user');
+							const obj = raw ? JSON.parse(raw) : {};
+							userName = String(obj?.name ?? '').trim();
+						} catch {}
+
+						const payload = {
+							items: this.items.map((it) => ({
+								id: Number(it?.product_id ?? 0),
+								title: String(it?.title ?? `Produk #${Number(it?.product_id ?? 0)}`),
+								price: Number(it?.price ?? 0),
+								qty: Number(it?.qty ?? 1),
+								variant: String(it?.size ?? ''),
+							})),
+							customer: {
+								user_id: auth.id ? Number(auth.id) : null,
+								name: userName,
+								email: '',
+								phone: '',
+								address: '',
+							},
+						};
+
+						const res = await fetch('/api/order', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify(payload),
+						});
+						const json = await res.json().catch(() => null);
+						if (!res.ok || !json?.success) {
+							const msg = String(json?.message ?? 'Checkout gagal.');
+							throw new Error(msg);
+						}
+
+						const redirect = String(json?.redirect_url ?? '').trim() || `/PesananSaya?menu=pesanan`;
+						window.location.assign(redirect);
+					} catch (e) {
+						const msg = String(e?.message ?? '').trim() || 'Checkout gagal.';
+						this.checkoutError = msg;
+					} finally {
+						this.checkoutLoading = false;
+					}
+				},
+				init() {
+					this.load();
+					const self = this;
+					window.addEventListener('cart:updated', () => self.load());
+					window.addEventListener('storage', (e) => {
+						if (e.key === KEY) self.load();
+					});
+					void self.loadFromServer();
+				},
+			};
+		};
+	</script>
 </Layout>
