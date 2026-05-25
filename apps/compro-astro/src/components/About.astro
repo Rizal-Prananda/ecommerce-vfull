@@ -18,17 +18,23 @@ const { CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001' } = 
 			<div class="relative lg:col-span-5">
 				<div class="about-reveal absolute -inset-8 rounded-[2.5rem] bg-gradient-to-br from-[#3B82F6]/20 via-[#3B82F6]/5 to-transparent blur-3xl opacity-60" style="--delay:0ms;"></div>
 
-				<img
-					src="/img/placeholder.png"
-					alt="Avenue Collective Model"
-					class="about-reveal relative mx-auto w-full max-w-md drop-shadow-[0_35px_60px_rgba(15,23,42,0.18)] transition-transform duration-700 ease-out hover:scale-[1.02] lg:mx-0 lg:-translate-x-8"
+				<!-- Slider Container -->
+				<div 
+					class="about-reveal relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-[2rem] shadow-[0_35px_60px_rgba(15,23,42,0.18)] transition-transform duration-700 ease-out hover:scale-[1.02] lg:mx-0 lg:-translate-x-8"
 					style="--delay:0ms;"
-					data-about-photo
-					loading="lazy"
-					decoding="async"
-				/>
+					data-about-slider
+				>
+					<img
+						src="/img/placeholder.png"
+						alt="Avenue Collective Model"
+						class="absolute inset-0 h-full w-full object-cover transition-opacity duration-1000"
+						data-about-photo
+						loading="lazy"
+						decoding="async"
+					/>
+				</div>
 
-				<div class="about-reveal absolute bottom-12 -right-4 rounded-2xl border border-slate-100/80 bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:-right-8" style="--delay:100ms;">
+				<div class="about-reveal absolute bottom-12 -right-4 z-20 rounded-2xl border border-slate-100/80 bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:-right-8" style="--delay:100ms;">
 					<p class="text-xs text-[#64748B]">Worn by</p>
 					<p class="text-base font-semibold text-[#0F172A]">10rb+ Avenue Fam</p>
 				</div>
@@ -80,17 +86,6 @@ const { CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001' } = 
 						<div class="mt-2 text-sm text-[#64748B]">Rating Shopee</div>
 					</div>
 				</div>
-
-				<div class="about-reveal pt-4" style="--delay:500ms;">
-					<a href="/about" class="group inline-flex items-center gap-3 font-semibold text-[#0F172A]">
-						<span class="border-b-2 border-[#0F172A] pb-1 transition-colors group-hover:border-[#3B82F6]">Kenalan Lebih Lanjut</span>
-						<span class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-slate-200 transition-all duration-300 group-hover:translate-x-1 group-hover:border-[#3B82F6] group-hover:bg-[#3B82F6]">
-							<svg class="h-4 w-4 text-[#0F172A] transition group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
-							</svg>
-						</span>
-					</a>
-				</div>
 			</div>
 		</div>
 	</div>
@@ -100,8 +95,10 @@ const { CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001' } = 
 			const section = document.querySelector('.about-animate');
 			if (!section) return;
 
-			const img = section.querySelector('[data-about-photo]');
+			const slider = section.querySelector('[data-about-slider]');
 			const cmsUrl = section.getAttribute('data-cms-url') || '';
+			let currentSlide = 0;
+			let slides = [];
 
 			const resolveCmsBase = () => {
 				const raw = String(cmsUrl || '').trim();
@@ -127,12 +124,39 @@ const { CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001' } = 
 				return cmsBase ? `${cmsBase}/${v}` : v;
 			};
 
-			const applyPhoto = (list) => {
-				if (!img) return;
-				if (!Array.isArray(list) || list.length === 0) return;
-				const png = list.map(normalizeUrl).find((u) => /\.png(\?.*)?$/i.test(String(u || ''))) || '';
-				if (!png) return;
-				img.setAttribute('src', png);
+			const applyPhotos = (list) => {
+				if (!slider) return;
+				const validPhotos = list.filter((u) => /\.(png|jpe?g|webp|avif|svg)(\?.*)?$/i.test(String(u || '')));
+				if (validPhotos.length === 0) return;
+
+				// Clear slider and add new images
+				slider.innerHTML = '';
+				slides = validPhotos.map((url, idx) => {
+					const img = document.createElement('img');
+					img.src = normalizeUrl(url);
+					img.alt = `Avenue Collective Photo ${idx + 1}`;
+					img.className = `absolute inset-0 h-full w-full object-cover transition-all duration-1000 ease-in-out ${idx === 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-110'}`;
+					img.loading = 'lazy';
+					slider.appendChild(img);
+					return img;
+				});
+
+				// Start slideshow if more than 1 image
+				if (slides.length > 1) {
+					setInterval(() => {
+						const nextSlide = (currentSlide + 1) % slides.length;
+						
+						// Fade out current
+						slides[currentSlide].classList.remove('opacity-100', 'scale-100');
+						slides[currentSlide].classList.add('opacity-0', 'scale-110');
+						
+						// Fade in next
+						slides[nextSlide].classList.remove('opacity-0', 'scale-110');
+						slides[nextSlide].classList.add('opacity-100', 'scale-100');
+						
+						currentSlide = nextSlide;
+					}, 5000);
+				}
 			};
 
 			const loadPhotos = async () => {
@@ -141,15 +165,32 @@ const { CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001' } = 
 					const resp = await fetch(`${cmsBase}/api/site-settings/about_photos`, { cache: 'no-store' });
 					const json = await resp.json().catch(() => null);
 					const raw = json && json.data ? json.data.value : null;
+
+					if (!raw) return;
+
 					if (Array.isArray(raw)) {
-						applyPhoto(raw);
+						applyPhotos(raw);
 						return;
 					}
-					if (typeof raw === 'string') {
-						const parsed = JSON.parse(raw);
-						if (Array.isArray(parsed)) applyPhoto(parsed);
+
+					if (typeof raw === 'string' && raw.trim() !== '') {
+						try {
+							const parsed = JSON.parse(raw);
+							if (Array.isArray(parsed)) {
+								applyPhotos(parsed);
+								return;
+							}
+							if (typeof parsed === 'string' && parsed.trim() !== '') {
+								applyPhotos([parsed]);
+								return;
+							}
+						} catch {
+							applyPhotos([raw]);
+						}
 					}
-				} catch {}
+				} catch (err) {
+					console.error('[About] Failed to load photos:', err);
+				}
 			};
 
 			loadPhotos();
