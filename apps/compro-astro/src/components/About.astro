@@ -1,0 +1,207 @@
+---
+type Props = {
+	CMS_URL?: string;
+};
+
+const { CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001' } = Astro.props as Props;
+---
+
+<section
+	id="about"
+	class="about-animate relative overflow-hidden bg-white py-32 lg:py-40 [font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe_UI,Roboto,Helvetica,Arial]"
+	data-cms-url={CMS_URL}
+>
+	<div class="pointer-events-none absolute top-0 right-0 h-full w-1/3 bg-gradient-to-l from-[#F8FAFC] to-transparent"></div>
+
+	<div class="mx-auto max-w-7xl px-6">
+		<div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-8">
+			<div class="relative lg:col-span-5">
+				<div class="about-reveal absolute -inset-8 rounded-[2.5rem] bg-gradient-to-br from-[#3B82F6]/20 via-[#3B82F6]/5 to-transparent blur-3xl opacity-60" style="--delay:0ms;"></div>
+
+				<img
+					src="/img/placeholder.png"
+					alt="Avenue Collective Model"
+					class="about-reveal relative mx-auto w-full max-w-md drop-shadow-[0_35px_60px_rgba(15,23,42,0.18)] transition-transform duration-700 ease-out hover:scale-[1.02] lg:mx-0 lg:-translate-x-8"
+					style="--delay:0ms;"
+					data-about-photo
+					loading="lazy"
+					decoding="async"
+				/>
+
+				<div class="about-reveal absolute bottom-12 -right-4 rounded-2xl border border-slate-100/80 bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:-right-8" style="--delay:100ms;">
+					<p class="text-xs text-[#64748B]">Worn by</p>
+					<p class="text-base font-semibold text-[#0F172A]">10rb+ Avenue Fam</p>
+				</div>
+			</div>
+
+			<div class="lg:col-span-7 space-y-8">
+				<div class="about-reveal flex items-center gap-4" style="--delay:100ms;">
+					<span class="text-sm font-semibold uppercase tracking-[0.2em] text-[#3B82F6]">Our Story</span>
+					<div class="h-px w-16 bg-[#3B82F6]/30"></div>
+				</div>
+
+				<h2 class="about-reveal text-5xl font-semibold leading-[1.1] tracking-tight text-[#0F172A] lg:text-6xl" style="--delay:200ms;">
+					Lahir dari Nongkrong,
+					<span class="relative inline-block">
+						Dibuat untuk Kamu
+						<svg class="absolute -bottom-2 left-0 w-full" height="12" viewBox="0 0 300 12" fill="none" aria-hidden="true">
+							<path d="M2 10C50 2 150 2 298 10" stroke="#3B82F6" stroke-width="3" stroke-linecap="round" opacity="0.3"></path>
+						</svg>
+					</span>
+					yang Beda
+				</h2>
+
+				<div class="about-reveal max-w-2xl space-y-4 text-lg leading-relaxed text-[#64748B]" style="--delay:300ms;">
+					<p>
+						<span class="float-left mr-3 mt-1 text-6xl font-semibold leading-none text-[#0F172A]">A</span>
+						venue Collective dimulai tahun 2021 dari keresahan simple: susah cari streetwear lokal yang desainnya gak pasaran tapi kualitasnya premium.
+					</p>
+					<p>
+						Kami percaya style itu cara kamu ngomong tanpa suara. Makanya tiap artikel kami digarap detail — dari milih bahan cotton combed 24s, sablon plastisol yang gak gampang pecah, sampe cutting yang bikin kamu pede seharian.
+					</p>
+				</div>
+
+				<div class="about-reveal grid grid-cols-3 gap-4 pt-6" style="--delay:400ms;">
+					<div class="rounded-2xl border border-slate-200/60 bg-white/60 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-lg">
+						<div class="text-4xl font-semibold text-[#0F172A]">100%</div>
+						<div class="mt-2 text-sm text-[#64748B]">Desain Original</div>
+					</div>
+					<div class="rounded-2xl border border-slate-200/60 bg-white/60 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-lg">
+						<div class="text-4xl font-semibold text-[#0F172A]">10rb+</div>
+						<div class="mt-2 text-sm text-[#64748B]">Avenue Fam</div>
+					</div>
+					<div class="rounded-2xl border border-slate-200/60 bg-white/60 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-lg">
+						<div class="flex items-center gap-1 text-4xl font-semibold text-[#0F172A]">
+							4.9
+							<svg class="h-6 w-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+								<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+							</svg>
+						</div>
+						<div class="mt-2 text-sm text-[#64748B]">Rating Shopee</div>
+					</div>
+				</div>
+
+				<div class="about-reveal pt-4" style="--delay:500ms;">
+					<a href="/about" class="group inline-flex items-center gap-3 font-semibold text-[#0F172A]">
+						<span class="border-b-2 border-[#0F172A] pb-1 transition-colors group-hover:border-[#3B82F6]">Kenalan Lebih Lanjut</span>
+						<span class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-slate-200 transition-all duration-300 group-hover:translate-x-1 group-hover:border-[#3B82F6] group-hover:bg-[#3B82F6]">
+							<svg class="h-4 w-4 text-[#0F172A] transition group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+							</svg>
+						</span>
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('DOMContentLoaded', () => {
+			const section = document.querySelector('.about-animate');
+			if (!section) return;
+
+			const img = section.querySelector('[data-about-photo]');
+			const cmsUrl = section.getAttribute('data-cms-url') || '';
+
+			const resolveCmsBase = () => {
+				const raw = String(cmsUrl || '').trim();
+				if (!raw) return '';
+				try {
+					const u = new URL(raw);
+					const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+					if (isLoopback) u.hostname = window.location.hostname;
+					return u.origin;
+				} catch {
+					return raw.replace(/\/$/, '');
+				}
+			};
+
+			const cmsBase = resolveCmsBase();
+
+			const normalizeUrl = (url) => {
+				const v = String(url || '').trim();
+				if (!v) return '';
+				if (/^https?:\/\//i.test(v)) return v;
+				if (v.startsWith('/product-media/')) return cmsBase ? `${cmsBase}${v}` : v;
+				if (v.startsWith('/')) return cmsBase ? `${cmsBase}${v}` : v;
+				return cmsBase ? `${cmsBase}/${v}` : v;
+			};
+
+			const applyPhoto = (list) => {
+				if (!img) return;
+				if (!Array.isArray(list) || list.length === 0) return;
+				const png = list.map(normalizeUrl).find((u) => /\.png(\?.*)?$/i.test(String(u || ''))) || '';
+				if (!png) return;
+				img.setAttribute('src', png);
+			};
+
+			const loadPhotos = async () => {
+				if (!cmsBase) return;
+				try {
+					const resp = await fetch(`${cmsBase}/api/site-settings/about_photos`, { cache: 'no-store' });
+					const json = await resp.json().catch(() => null);
+					const raw = json && json.data ? json.data.value : null;
+					if (Array.isArray(raw)) {
+						applyPhoto(raw);
+						return;
+					}
+					if (typeof raw === 'string') {
+						const parsed = JSON.parse(raw);
+						if (Array.isArray(parsed)) applyPhoto(parsed);
+					}
+				} catch {}
+			};
+
+			loadPhotos();
+
+			if (!('IntersectionObserver' in window)) {
+				section.classList.add('about-inview');
+				return;
+			}
+
+			const io = new IntersectionObserver((entries) => {
+				entries.forEach((entry) => {
+					if (entry.isIntersecting) {
+						section.classList.add('about-inview');
+						io.unobserve(entry.target);
+					}
+				});
+			}, { threshold: 0.15 });
+
+			io.observe(section);
+		});
+	</script>
+
+	<style is:global>
+		@keyframes about-fade-up {
+			from {
+				opacity: 0;
+				transform: translateY(24px);
+			}
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		#about .about-reveal {
+			opacity: 0;
+			transform: translateY(24px);
+			will-change: opacity, transform;
+		}
+
+		#about.about-inview .about-reveal {
+			animation: about-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+			animation-delay: var(--delay, 0ms);
+		}
+	</style>
+
+	<noscript>
+		<style>
+			#about .about-reveal {
+				opacity: 1 !important;
+				transform: none !important;
+			}
+		</style>
+	</noscript>
+</section>

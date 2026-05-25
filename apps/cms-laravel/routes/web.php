@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\MarketplaceController;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -43,12 +44,12 @@ Route::get('/', function () {
 
 Route::get('/product-media/{path}', function (string $path) {
     $path = ltrim($path, '/');
-    if ($path === '' || str_contains($path, '..') || !(str_starts_with($path, 'products/') || str_starts_with($path, 'banners/'))) {
+    if ($path === '' || str_contains($path, '..') || !(str_starts_with($path, 'products/') || str_starts_with($path, 'banners/') || str_starts_with($path, 'about/'))) {
         abort(404);
     }
 
     $ext = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
-    if (!in_array($ext, ['webp', 'svg', 'jpg', 'jpeg'], true)) {
+    if (!in_array($ext, ['webp', 'svg', 'jpg', 'jpeg', 'png'], true)) {
         abort(404);
     }
 
@@ -335,4 +336,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     Route::get('marketplace', [MarketplaceController::class, 'index'])->name('admin.marketplace.index');
     Route::post('marketplace/hero-banner', [MarketplaceController::class, 'updateBanner'])->name('admin.marketplace.banner');
+
+    Route::get('homepage', [HomeController::class, 'index'])->name('admin.homepage.index');
+    Route::post('homepage', [HomeController::class, 'update'])->name('admin.homepage.update');
+    Route::post('homepage/reorder', [HomeController::class, 'reorder'])->name('admin.homepage.reorder');
+
+    Route::get('about', [\App\Http\Controllers\Admin\AboutController::class, 'index'])->name('admin.about.index');
+    Route::post('about', [\App\Http\Controllers\Admin\AboutController::class, 'update'])->name('admin.about.update');
 });

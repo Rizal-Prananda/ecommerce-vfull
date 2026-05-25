@@ -37,8 +37,8 @@ const q = (Astro.url.searchParams.get('q') ?? '').trim();
 
 let cmsError: string | null = null;
 let products: Product[] = [];
-let heroDesktopSrc = '/images/default-hero.webp';
-let heroMobileSrc = '/images/default-hero.webp';
+let heroDesktopSrc = '/marketplace/baju 1.webp';
+let heroMobileSrc = '/marketplace/baju 2.webp';
 
 const resolveCmsAssetUrl = (cmsBaseUrl: string, raw: string, fallback: string) => {
 	const base = String(cmsBaseUrl).replace(/\/$/, '');

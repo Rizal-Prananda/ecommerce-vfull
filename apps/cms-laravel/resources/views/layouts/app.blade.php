@@ -418,7 +418,7 @@
                     </div>
 
                     <div
-                        x-data="{ open: {{ request()->is('admin/marketplace*') ? 'true' : 'false' }} }"
+                        x-data="{ open: {{ (request()->is('admin/marketplace*') || request()->is('admin/homepage*') || request()->is('admin/about*')) ? 'true' : 'false' }} }"
                         @sidebar-dropdown-opened.window="if ($event.detail !== 'system') open = false">
                         <button
                             type="button"
@@ -426,11 +426,11 @@
                                 open = !open;
                                 if (open) { $dispatch('sidebar-dropdown-opened', 'system'); }
                             "
-                            class="group relative flex w-full items-center rounded-lg text-sm font-medium transition-all duration-200 {{ request()->is('admin/marketplace*') ? 'bg-[#1A56DB] text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white' }}"
+                            class="group relative flex w-full items-center rounded-lg text-sm font-medium transition-all duration-200 {{ (request()->is('admin/marketplace*') || request()->is('admin/homepage*') || request()->is('admin/about*')) ? 'bg-[#1A56DB] text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white' }}"
                             :class="sidebarOpen ? 'gap-3 px-4 py-2.5 justify-start' : 'gap-0 px-2 py-2.5 justify-center'"
                             :aria-expanded="open"
                             aria-haspopup="menu">
-                            <svg class="size-5 shrink-0 {{ request()->is('admin/marketplace*') ? 'text-white' : 'text-gray-300 group-hover:text-white' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg class="size-5 shrink-0 {{ (request()->is('admin/marketplace*') || request()->is('admin/homepage*') || request()->is('admin/about*')) ? 'text-white' : 'text-gray-300 group-hover:text-white' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 3v4" />
                                 <path d="M12 17v4" />
                                 <path d="M3 12h4" />
@@ -474,6 +474,25 @@
                                     <path d="M9 7V5a3 3 0 0 1 6 0v2" />
                                 </svg>
                                 <span>Marketplace</span>
+                            </a>
+                            <a
+                                href="{{ route('admin.homepage.index') }}"
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('admin/homepage*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
+                                <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 9.5L12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V9.5Z" />
+                                </svg>
+                                <span>Homepage</span>
+                            </a>
+                            <a
+                                href="{{ route('admin.about.index') }}"
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('admin/about*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
+                                <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 6h16" />
+                                    <path d="M4 18h16" />
+                                    <path d="M8 6v12" />
+                                    <path d="M16 6v12" />
+                                </svg>
+                                <span>About</span>
                             </a>
                         </div>
                     </div>

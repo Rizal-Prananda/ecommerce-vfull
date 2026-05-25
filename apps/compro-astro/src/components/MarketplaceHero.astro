@@ -5,8 +5,8 @@ interface Props {
 }
 
 const {
-	heroDesktop = '/assets/default-marketplace-hero.webp',
-	heroMobile = '/assets/default-marketplace-hero-mobile.webp',
+	heroDesktop = '/marketplace/baju 1.webp',
+	heroMobile = '/marketplace/baju 2.webp',
 } = Astro.props as Props;
 ---
 
@@ -20,7 +20,7 @@ const {
 			class="w-full h-[75vh] md:h-[85vh] object-cover animate-kenburns"
 			loading="eager"
 			decoding="async"
-			onerror="this.onerror=null; this.src='/images/default-hero.webp';"
+			onerror="this.onerror=null; this.src='/marketplace/baju 1.webp';"
 		/>
 	</picture>
 

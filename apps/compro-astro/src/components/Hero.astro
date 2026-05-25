@@ -1,0 +1,385 @@
+---
+type Props = {
+	id?: string;
+};
+
+const {
+	id = 'home'
+} = Astro.props as Props;
+
+const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001';
+---
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<section
+	id={id}
+	class="hero-animate relative flex min-h-[86vh] items-center overflow-hidden py-20 pb-16 lg:min-h-[92vh] [font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe_UI,Roboto,Helvetica,Arial]"
+	style="background-size: cover; background-position: 80% center;"
+>
+	<div class="hero-bg hero-bg-a pointer-events-none absolute inset-0 z-0 opacity-100" style="background-image: radial-gradient(1200px 800px at 70% 30%, rgba(59,130,246,0.22), transparent 60%), radial-gradient(900px 700px at 25% 55%, rgba(15,23,42,0.10), transparent 55%), linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 55%, #EEF2FF 100%);"></div>
+	<div class="hero-bg hero-bg-b pointer-events-none absolute inset-0 z-0 opacity-0" style="background-image: radial-gradient(1200px 800px at 70% 30%, rgba(59,130,246,0.22), transparent 60%), radial-gradient(900px 700px at 25% 55%, rgba(15,23,42,0.10), transparent 55%), linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 55%, #EEF2FF 100%);"></div>
+
+	<div class="pointer-events-none absolute inset-0 z-10 bg-gradient-to-r from-white/80 via-white/50 to-transparent"></div>
+	<div class="pointer-events-none absolute inset-y-0 left-0 z-10 w-[55%] backdrop-blur-sm [mask-image:linear-gradient(to_right,black_50%,transparent_100%)]"></div>
+
+	<div class="relative z-10 mx-auto w-full max-w-7xl px-6">
+		<div class="grid gap-12 md:items-center">
+			<div class="flex flex-col gap-6">
+				<h1 data-hero="headline" class="hero-reveal text-4xl font-semibold leading-tight tracking-tight text-[#0F172A] md:text-5xl [text-shadow:0_2px_16px_rgba(255,255,255,1),0_1px_12px_rgba(255,255,255,0.9),0_2px_30px_rgba(255,255,255,0.9)]" style="--y:20px;--delay:0ms;--dur:800ms;">
+					Streetwear Lokal yang Gak Pasaran
+				</h1>
+				<p data-hero="subheadline" class="hero-reveal mt-1 max-w-xl text-base leading-7 text-[#64748B]/90" style="--y:20px;--delay:200ms;--dur:800ms;">
+					Kaos, hoodie, dan jaket dengan desain eksklusif. Bahan premium, cutting nyaman, dipake nongkrong auto dilirik.
+				</p>
+				<div class="hero-reveal mt-2 flex flex-col gap-3 sm:flex-row" style="--y:20px;--delay:400ms;--dur:800ms;">
+					<a
+						href="/marketplace"
+						class="inline-flex h-12 items-center justify-center rounded-full bg-[#3B82F6] px-6 text-sm font-semibold text-white shadow-sm transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#2563EB]"
+					>
+						Belanja Sekarang
+					</a>
+					<a
+						href="/marketplace?filter=new"
+						class="inline-flex h-12 items-center justify-center rounded-full border border-[#E5E7EB] bg-white px-6 text-sm font-semibold text-[#0F172A] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#F8FAFC] hover:shadow-sm"
+					>
+						Koleksi Terbaru
+					</a>
+				</div>
+			</div>
+		</div>
+
+		<script is:inline>
+			const hero = document.querySelector('.hero-animate');
+			if (hero) {
+				const layers = Array.from(hero.querySelectorAll('.hero-bg'));
+				window.addEventListener('scroll', () => {
+					const offset = window.pageYOffset * 0.15;
+					layers.forEach((el) => {
+						el.style.backgroundPositionY = `${offset}px`;
+					});
+				});
+			}
+		</script>
+	</div>
+
+	<div class="absolute bottom-8 left-0 right-0 z-20">
+		<div class="mx-auto max-w-7xl px-6">
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+				<div
+					class="hero-reveal rounded-3xl border border-white/40 bg-white/60 p-5 backdrop-blur-2xl shadow-[0_20px_50px_rgba(15,23,42,0.08)] transition-all duration-500 hover:bg-white/70 hover:-translate-y-1"
+					style="--y:12px;--delay:600ms;--dur:700ms;"
+				>
+					<div class="text-3xl font-semibold tracking-tight text-[#0F172A]">10rb+</div>
+					<div class="mt-1 text-sm font-medium text-[#64748B]/80">Produk Terjual</div>
+				</div>
+				<div
+					class="hero-reveal rounded-3xl border border-white/40 bg-white/60 p-5 backdrop-blur-2xl shadow-[0_20px_50px_rgba(15,23,42,0.08)] transition-all duration-500 hover:bg-white/70 hover:-translate-y-1"
+					style="--y:12px;--delay:700ms;--dur:700ms;"
+				>
+					<div class="text-3xl font-semibold tracking-tight text-[#0F172A]">4.9★</div>
+					<div class="mt-1 text-sm font-medium text-[#64748B]/80">Rating Pembeli</div>
+				</div>
+				<div
+					class="hero-reveal rounded-3xl border border-white/40 bg-white/60 p-5 backdrop-blur-2xl shadow-[0_20px_50px_rgba(15,23,42,0.08)] transition-all duration-500 hover:bg-white/70 hover:-translate-y-1"
+					style="--y:12px;--delay:800ms;--dur:700ms;"
+				>
+					<div class="text-3xl font-semibold tracking-tight text-[#0F172A]">Gratis</div>
+					<div class="mt-1 text-sm font-medium text-[#64748B]/80">Ongkir Se-Jawa</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<noscript>
+	<style>
+		.hero-animate .hero-reveal { opacity: 1 !important; transform: none !important; }
+	</style>
+</noscript>
+
+<script is:inline define:vars={{ CMS_URL }}>
+	document.addEventListener('DOMContentLoaded', () => {
+		const heroes = Array.from(document.querySelectorAll('.hero-animate'));
+		const startReveal = () => {
+			if (!heroes.length) return;
+			if (!('IntersectionObserver' in window)) {
+				heroes.forEach((el) => el.classList.add('hero-inview'));
+				return;
+			}
+			const io = new IntersectionObserver(
+				(entries) => {
+					entries.forEach((entry) => {
+						if (entry.isIntersecting) {
+							entry.target.classList.add('hero-inview');
+							io.unobserve(entry.target);
+						}
+					});
+				},
+				{ threshold: 0.15 }
+			);
+			heroes.forEach((el) => io.observe(el));
+		};
+
+		const resolveCmsBase = () => {
+			const raw = String(CMS_URL || '').trim().replace(/\/$/, '');
+			if (!raw) {
+				const h = String(window.location.hostname || '').trim().toLowerCase();
+				if (h === 'localhost' || h === '127.0.0.1') {
+					return `${window.location.protocol}//${window.location.hostname}:8001`;
+				}
+				return '';
+			}
+			try {
+				const u = new URL(raw);
+				const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+				if (isLoopback) u.hostname = window.location.hostname;
+				return u.origin;
+			} catch {
+				return raw;
+			}
+		};
+		const cmsBase = resolveCmsBase();
+		const hero = heroes[0];
+
+		const resolveAssetUrl = (raw) => {
+			const v = String(raw || '').trim();
+			if (!v) return '';
+			if (/^https?:\/\//i.test(v)) return v;
+			if (v.startsWith('/product-media/')) return cmsBase ? `${cmsBase}${v}` : v;
+			if (v.startsWith('/')) return v;
+			return cmsBase ? `${cmsBase}/${v}` : v;
+		};
+
+		const getLayers = () => {
+			if (!hero) return { a: null, b: null };
+			return {
+				a: hero.querySelector('.hero-bg-a'),
+				b: hero.querySelector('.hero-bg-b')
+			};
+		};
+
+		const setLayerBg = (el, u) => {
+			if (!hero || !el || !u) return;
+			el.style.backgroundImage = `url("${String(u).replace(/"/g, '%22')}")`;
+		};
+
+		const crossfadeTo = (u) => {
+			if (!hero || !u) return;
+			const { a, b } = getLayers();
+			if (!a || !b) return;
+
+			const activeKey = hero.dataset.bgActive === 'b' ? 'b' : 'a';
+			const active = activeKey === 'a' ? a : b;
+			const next = activeKey === 'a' ? b : a;
+
+			setLayerBg(next, u);
+			requestAnimationFrame(() => {
+				next.style.opacity = '1';
+				active.style.opacity = '0';
+				hero.dataset.bgActive = activeKey === 'a' ? 'b' : 'a';
+			});
+		};
+
+		const applyHero = (banner, headline, subheadline) => {
+			if (!hero) return;
+
+			if (banner) {
+				const url = resolveAssetUrl(banner);
+				if (url) {
+					const { a } = getLayers();
+					if (a) {
+						hero.dataset.bgActive = hero.dataset.bgActive || 'a';
+						a.style.opacity = '1';
+						const { b } = getLayers();
+						if (b) b.style.opacity = '0';
+						setLayerBg(a, url);
+					}
+				}
+			}
+
+			if (headline) {
+				const el = hero.querySelector('[data-hero="headline"]');
+				if (el) el.textContent = String(headline);
+			}
+
+			if (subheadline) {
+				const el = hero.querySelector('[data-hero="subheadline"]');
+				if (el) el.textContent = String(subheadline);
+			}
+		};
+
+		const startSlideshow = (banners) => {
+			if (!hero) return;
+			if (hero.dataset.slideshowStarted === '1') return;
+			if (!Array.isArray(banners)) return;
+			const urls = banners
+				.map((v) => resolveAssetUrl(v))
+				.map((v) => String(v || '').trim())
+				.filter(Boolean);
+			if (urls.length < 2) return;
+
+			if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+			let idx = 0;
+			hero.dataset.slideshowStarted = '1';
+			hero.dataset.bgActive = hero.dataset.bgActive || 'a';
+
+			const preload = (u) => {
+				try {
+					const img = new Image();
+					img.decoding = 'async';
+					img.loading = 'eager';
+					img.src = u;
+				} catch {}
+			};
+			const init = (u) => {
+				const { a, b } = getLayers();
+				if (!a || !b) return;
+				a.style.opacity = '1';
+				b.style.opacity = '0';
+				hero.dataset.bgActive = 'a';
+				setLayerBg(a, u);
+			};
+
+			init(urls[idx]);
+			preload(urls[(idx + 1) % urls.length]);
+
+			const intervalMs = 6500;
+			window.setInterval(() => {
+				idx = (idx + 1) % urls.length;
+				const u = urls[idx];
+				preload(urls[(idx + 1) % urls.length]);
+				crossfadeTo(u);
+			}, intervalMs);
+		};
+
+		const cacheKey = 'avenue_hero_settings_v1';
+		try {
+			const cached = JSON.parse(String(window.sessionStorage.getItem(cacheKey) || 'null'));
+			if (cached && (cached.banner || cached.headline || cached.subheadline)) {
+				applyHero(cached.banner, cached.headline, cached.subheadline);
+			}
+			if (cached && Array.isArray(cached.banners) && cached.banners.length) {
+				startSlideshow(cached.banners);
+			}
+		} catch {}
+
+		startReveal();
+
+		if (!cmsBase) return;
+
+		const fetchSetting = async (key, signal) => {
+			try {
+				const res = await fetch(
+					`${cmsBase}/api/site-settings/${encodeURIComponent(key)}`,
+					{ credentials: 'omit', cache: 'no-store', signal }
+				);
+				const json = await res.json().catch(() => null);
+				return json && json.data ? json.data.value : null;
+			} catch {
+				return null;
+			}
+		};
+
+		const controller = new AbortController();
+		const timeoutId = window.setTimeout(() => controller.abort(), 4500);
+
+		Promise.all([
+			fetchSetting('hero_banner', controller.signal),
+			fetchSetting('hero_banners', controller.signal),
+			fetchSetting('hero_headline', controller.signal),
+			fetchSetting('hero_subheadline', controller.signal)
+		])
+			.then(([banner, bannersRaw, headline, subheadline]) => {
+				applyHero(banner, headline, subheadline);
+
+				let banners = [];
+				try {
+					if (Array.isArray(bannersRaw)) {
+						banners = bannersRaw;
+					} else {
+						const v = String(bannersRaw || '').trim();
+						if (v) {
+							const j = JSON.parse(v);
+							if (Array.isArray(j)) banners = j;
+						}
+					}
+				} catch {}
+				if (Array.isArray(banners) && banners.length) {
+					startSlideshow(banners);
+				}
+
+				try {
+					window.sessionStorage.setItem(cacheKey, JSON.stringify({ banner, banners, headline, subheadline, t: Date.now() }));
+				} catch {}
+			})
+			.catch(() => {})
+			.finally(() => window.clearTimeout(timeoutId));
+
+		window.setTimeout(() => {
+			if (!hero) return;
+			if (hero.dataset.slideshowStarted === '1') return;
+			if (!cmsBase) return;
+
+			Promise.all([
+				fetchSetting('hero_banner'),
+				fetchSetting('hero_banners'),
+				fetchSetting('hero_headline'),
+				fetchSetting('hero_subheadline')
+			]).then(([banner, bannersRaw, headline, subheadline]) => {
+				applyHero(banner, headline, subheadline);
+
+				let banners = [];
+				try {
+					if (Array.isArray(bannersRaw)) {
+						banners = bannersRaw;
+					} else {
+						const v = String(bannersRaw || '').trim();
+						if (v) {
+							const j = JSON.parse(v);
+							if (Array.isArray(j)) banners = j;
+						}
+					}
+				} catch {}
+				if (Array.isArray(banners) && banners.length) {
+					startSlideshow(banners);
+				}
+			}).catch(() => {});
+		}, 1800);
+	});
+</script>
+
+<style>
+	.hero-bg {
+		background-size: cover;
+		background-position: 80% center;
+		transition: opacity 1200ms cubic-bezier(0.16, 1, 0.3, 1);
+		will-change: opacity;
+	}
+
+	.hero-animate .hero-reveal {
+		opacity: 0;
+		transform: translateY(var(--y, 0px)) translateX(var(--x, 0px));
+		transition-property: opacity, transform;
+		transition-duration: var(--dur, 800ms);
+		transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+		transition-delay: var(--delay, 0ms);
+		will-change: opacity, transform;
+	}
+
+	.hero-animate.hero-inview .hero-reveal {
+		opacity: 1;
+		transform: translateY(0px) translateX(0px);
+	}
+
+	@media (max-width: 768px) {
+		.hero-bg {
+			background-position: 60% center !important;
+		}
+		.hero-animate { min-height: 75vh !important; }
+		.hero-animate h1 { font-size: 2.25rem !important; }
+	}
+</style>

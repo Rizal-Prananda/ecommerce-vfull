@@ -12,7 +12,28 @@ Route::get('/health', function () {
     return response()->json(['ok' => true]);
 });
 
-Route::get('/site-settings/{key}', function (string $key) {
+Route::match(['GET', 'OPTIONS'], '/site-settings/{key}', function (Request $request, string $key) {
+    $origin = (string) $request->header('Origin', '');
+    $allowOrigin = '';
+    if (app()->environment('local')) {
+        if ($origin !== '') {
+            $allowOrigin = $origin;
+        } else {
+            $allowOrigin = '*';
+        }
+    }
+
+    if ($request->isMethod('OPTIONS')) {
+        $resp = response()->json(['ok' => true]);
+        if ($allowOrigin !== '') {
+            $resp->headers->set('Access-Control-Allow-Origin', $allowOrigin);
+            $resp->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+            $resp->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Pelanggan-Id');
+            $resp->headers->set('Vary', 'Origin');
+        }
+        return $resp;
+    }
+
     $key = trim($key);
     if ($key === '' || str_contains($key, '..')) {
         abort(404);
@@ -20,12 +41,19 @@ Route::get('/site-settings/{key}', function (string $key) {
 
     $row = SiteSetting::query()->where('key', $key)->first();
 
-    return response()->json([
+    $resp = response()->json([
         'data' => [
             'key' => $key,
             'value' => $row?->value,
         ],
     ]);
+
+    if ($allowOrigin !== '') {
+        $resp->headers->set('Access-Control-Allow-Origin', $allowOrigin);
+        $resp->headers->set('Vary', 'Origin');
+    }
+
+    return $resp;
 })->where('key', '[A-Za-z0-9_\-]+');
 
 Route::post('/register', function (Request $request) {
@@ -296,7 +324,7 @@ Route::get('/orders', function (Request $request) {
     foreach ($orders as $o) {
         $orderIds[] = (int) ($o->id_order ?? 0);
     }
-    $orderIds = array_values(array_filter($orderIds, fn ($x) => $x > 0));
+    $orderIds = array_values(array_filter($orderIds, fn($x) => $x > 0));
 
     $itemsByOrder = [];
     $productIdsNeedingImage = [];
@@ -628,8 +656,8 @@ Route::post('/reviews', function (Request $request) {
     $hasLine = $conn->table('OrderItems')
         ->where('id_order', (int) ($orderRow->id_order ?? 0))
         ->where('product_id', $productId)
-        ->when($variantId !== null, fn ($q) => $q->where('variant_id', $variantId))
-        ->when($variantId === null, fn ($q) => $q->whereNull('variant_id'))
+        ->when($variantId !== null, fn($q) => $q->where('variant_id', $variantId))
+        ->when($variantId === null, fn($q) => $q->whereNull('variant_id'))
         ->exists();
 
     if (!$hasLine) {
@@ -673,8 +701,8 @@ Route::post('/reviews', function (Request $request) {
     $conn->table('OrderItems')
         ->where('id_order', (int) ($orderRow->id_order ?? 0))
         ->where('product_id', $productId)
-        ->when($variantId !== null, fn ($q) => $q->where('variant_id', $variantId))
-        ->when($variantId === null, fn ($q) => $q->whereNull('variant_id'))
+        ->when($variantId !== null, fn($q) => $q->where('variant_id', $variantId))
+        ->when($variantId === null, fn($q) => $q->whereNull('variant_id'))
         ->update([
             'review_rating' => $rating,
             'review_comment' => $comment,
@@ -685,8 +713,8 @@ Route::post('/reviews', function (Request $request) {
         ->where('id_pelanggan', $id)
         ->where('order_id', $orderId)
         ->where('product_id', $productId)
-        ->when($variantId !== null, fn ($q) => $q->where('variant_id', $variantId))
-        ->when($variantId === null, fn ($q) => $q->whereNull('variant_id'))
+        ->when($variantId !== null, fn($q) => $q->where('variant_id', $variantId))
+        ->when($variantId === null, fn($q) => $q->whereNull('variant_id'))
         ->first(['id']);
 
     if ($existing) {

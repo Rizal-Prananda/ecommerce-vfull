@@ -466,6 +466,80 @@
                         </div>
                     </div>
 
+                    <div
+                        x-data="{ open: {{ (request()->is('admin/marketplace*') || request()->is('admin/homepage*') || request()->is('admin/about*')) ? 'true' : 'false' }} }"
+                        @sidebar-dropdown-opened.window="if ($event.detail !== 'system') open = false">
+                        <button
+                            type="button"
+                            @click="
+                                open = !open;
+                                if (open) { $dispatch('sidebar-dropdown-opened', 'system'); }
+                            "
+                            class="group relative flex w-full items-center rounded-lg text-sm font-medium transition-all duration-200 {{ (request()->is('admin/marketplace*') || request()->is('admin/homepage*') || request()->is('admin/about*')) ? 'bg-[#1A56DB] text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white' }}"
+                            :class="sidebarOpen ? 'gap-3 px-4 py-2.5 justify-start' : 'gap-0 px-2 py-2.5 justify-center'"
+                            :aria-expanded="open"
+                            aria-haspopup="menu">
+                            <svg class="size-5 shrink-0 {{ (request()->is('admin/marketplace*') || request()->is('admin/homepage*') || request()->is('admin/about*')) ? 'text-white' : 'text-gray-300 group-hover:text-white' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2l3 5h6l-4.5 4 2 6-6.5-4-6.5 4 2-6L3 7h6l3-5z" />
+                            </svg>
+                            <span x-show="sidebarOpen" x-transition.opacity.duration.200ms x-cloak>System Administration</span>
+
+                            <div
+                                x-show="!sidebarOpen"
+                                x-transition
+                                x-cloak
+                                class="absolute left-full ml-3 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white opacity-0 invisible shadow-lg transition-all whitespace-nowrap group-hover:opacity-100 group-hover:visible">
+                                System Administration
+                            </div>
+
+                            <svg
+                                x-show="sidebarOpen"
+                                x-transition.opacity.duration.200ms
+                                x-cloak
+                                class="ml-auto size-4 text-gray-300 transition-transform"
+                                :class="open ? 'rotate-180' : ''"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+
+                        <div x-show="sidebarOpen && open" x-collapse x-cloak class="mt-1 ml-4 space-y-1 border-l border-white/10 pl-4">
+                            <a
+                                href="{{ route('admin.marketplace.index') }}"
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('admin/marketplace*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
+                                <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M6 2l1 4h10l1-4" />
+                                    <path d="M3 6h18" />
+                                    <path d="M5 6l1.5 16h11L19 6" />
+                                </svg>
+                                <span>Marketplace</span>
+                            </a>
+                            <a
+                                href="{{ route('admin.homepage.index') }}"
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('admin/homepage*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
+                                <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 10.5L12 3l9 7.5" />
+                                    <path d="M5 10v10h14V10" />
+                                </svg>
+                                <span>Homepage</span>
+                            </a>
+                            <a
+                                href="{{ route('admin.about.index') }}"
+                                class="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition {{ request()->is('admin/about*') ? 'bg-white/5 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white' }}">
+                                <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 6h16" />
+                                    <path d="M4 18h16" />
+                                    <path d="M8 6v12" />
+                                    <path d="M16 6v12" />
+                                </svg>
+                                <span>About</span>
+                            </a>
+                        </div>
+                    </div>
+
 
             </nav>
 

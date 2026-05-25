@@ -7,9 +7,10 @@ import { Toaster } from 'sonner';
 type Props = {
 	title?: string;
 	navbarVariant?: 'default' | 'auth';
+	withNavbar?: boolean;
 };
 
-const { title = 'E-Commerce', navbarVariant = 'default' } = Astro.props;
+const { title = 'E-Commerce', navbarVariant = 'default', withNavbar = true } = Astro.props;
 ---
 
 <html lang="id" class="h-full">
@@ -23,7 +24,7 @@ const { title = 'E-Commerce', navbarVariant = 'default' } = Astro.props;
 		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	</head>
 	<body class="min-h-full">
-		<Navbar variant={navbarVariant} />
+		{withNavbar ? <Navbar variant={navbarVariant} /> : null}
 		<slot />
 		<Toaster richColors position="top-right" client:load />
 		<FloatingChat client:load />
