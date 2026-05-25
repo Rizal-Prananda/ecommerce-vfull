@@ -62,7 +62,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://localhost:8001';
 											loading="lazy"
 										/>
 										<div class="min-w-0">
-											<div class="mt-0.5 truncate text-sm font-medium text-zinc-900" x-text="it.title || `Produk #${it.product_id}`"></div>
+											<div class="mt-0.5 text-sm font-medium text-zinc-900 break-words whitespace-normal" x-text="it.title || `Produk #${it.product_id}`"></div>
 											<div class="mt-0.5 text-sm text-zinc-500" x-text="it.size ? `Ukuran : ${it.size}` : ''"></div>
 										</div>
 									</div>

@@ -71,10 +71,10 @@ if ($labelId === null) {
             <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
                 <div class="mb-5">
                     <div class="text-sm font-semibold text-zinc-900">Harga &amp; Inventori</div>
-                    <div class="mt-1 text-sm text-zinc-500">Harga, stok, satuan, dan rating.</div>
+                    <div class="mt-1 text-sm text-zinc-500">Harga, stok, dan satuan.</div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div class="sm:col-span-2">
                         <label class="text-sm font-medium text-zinc-700" for="price">Harga</label>
                         <div class="mt-1.5 flex overflow-hidden rounded-lg border border-zinc-300 bg-white shadow-sm focus-within:border-zinc-900 focus-within:ring-2 focus-within:ring-zinc-900">
@@ -87,14 +87,6 @@ if ($labelId === null) {
                     </div>
 
                     <div>
-                        <label class="text-sm font-medium text-zinc-700" for="rating">Rating</label>
-                        <input id="rating" name="rating" type="text" value="{{ old('rating', $product->rating) }}" class="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900" />
-                        @error('rating')
-                        <div class="mt-1.5 text-xs text-red-600">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="sm:col-span-2">
                         <label class="text-sm font-medium text-zinc-700" for="stock">Stok</label>
                         <div class="mt-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-900">
                             {{ (int) ($product->stock ?? 0) }} {{ (string) ($product->unit ?? 'Pieces') }}

@@ -140,7 +140,10 @@ const navItems = items.map((x) => ({ ...x, href: resolveHref(x.href) }));
 	}
 
 	<script is:inline data-astro-rerun>
-		document.getElementById('navbar-nojs')?.classList.add('hidden');
+		(function () {
+			const el = document.getElementById('navbar-nojs');
+			if (el) el.classList.add('hidden');
+		})();
 	</script>
 
 	<script is:inline data-astro-rerun>
@@ -178,8 +181,8 @@ const navItems = items.map((x) => ({ ...x, href: resolveHref(x.href) }));
 					const raw = window.localStorage.getItem('user');
 					if (!raw) return null;
 					const obj = JSON.parse(raw);
-					const name = String(obj?.name ?? '').trim();
-					const avatarUrl = String(obj?.avatarUrl ?? '').trim();
+					const name = String(obj && obj.name ? obj.name : '').trim();
+					const avatarUrl = String(obj && obj.avatarUrl ? obj.avatarUrl : '').trim();
 					if (!name) return null;
 					return { name, avatarUrl };
 				} catch {
@@ -240,8 +243,9 @@ const navItems = items.map((x) => ({ ...x, href: resolveHref(x.href) }));
 						})
 							.then((r) => r.json().catch(() => null))
 							.then((j) => {
-								const name = String(j?.data?.nama_lengkap ?? '').trim();
-								const avatarUrl = String(j?.data?.avatar ?? '').trim();
+								const data = j && j.data ? j.data : {};
+								const name = String(data.nama_lengkap ? data.nama_lengkap : '').trim();
+								const avatarUrl = String(data.avatar ? data.avatar : '').trim();
 								if (!name) return;
 								try {
 									window.localStorage.setItem('user', JSON.stringify({ name, avatarUrl }));
@@ -269,8 +273,9 @@ const navItems = items.map((x) => ({ ...x, href: resolveHref(x.href) }));
 				})
 					.then((r) => r.json().catch(() => null))
 					.then((j) => {
-						const name = String(j?.data?.nama_lengkap ?? '').trim();
-						const avatarUrl = String(j?.data?.avatar ?? '').trim();
+						const data = j && j.data ? j.data : {};
+						const name = String(data.nama_lengkap ? data.nama_lengkap : '').trim();
+						const avatarUrl = String(data.avatar ? data.avatar : '').trim();
 						if (!name) return;
 						try {
 							window.localStorage.setItem('user', JSON.stringify({ name, avatarUrl }));

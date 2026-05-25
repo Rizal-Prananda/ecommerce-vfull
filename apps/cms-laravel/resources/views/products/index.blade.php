@@ -101,7 +101,6 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="font-semibold text-zinc-900">{{ $p->price_formatted }}</div>
-                                <div class="mt-1 text-xs text-zinc-500">★ {{ number_format((float) ($p->rating ?? 0), 1) }}</div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="{{ $stock < 10 ? 'font-semibold text-red-600' : 'text-zinc-700' }}">{{ $stock }} {{ $unit }}</div>

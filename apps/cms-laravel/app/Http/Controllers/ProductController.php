@@ -85,7 +85,8 @@ class ProductController extends Controller
 
         $price = $this->parseInt((string) $validated['price']);
         $stock = max(0, $this->parseInt((string) $validated['stock']));
-        $rating = $validated['rating'] !== null ? (float) $validated['rating'] : 0.0;
+        $ratingInput = $validated['rating'] ?? null;
+        $rating = $ratingInput !== null ? (float) $ratingInput : 0.0;
         $rating = max(0.0, min(5.0, $rating));
 
         $slug = $this->makeUniqueSlug($title);
@@ -220,7 +221,8 @@ class ProductController extends Controller
         $labelCode = strtolower(trim((string) ($label?->code ?? 'none')));
 
         $price = $this->parseInt((string) $validated['price']);
-        $rating = $validated['rating'] !== null ? (float) $validated['rating'] : 0.0;
+        $ratingInput = $validated['rating'] ?? null;
+        $rating = $ratingInput !== null ? (float) $ratingInput : 0.0;
         $rating = max(0.0, min(5.0, $rating));
 
         $slug = $this->makeUniqueSlug($title, $product->id);

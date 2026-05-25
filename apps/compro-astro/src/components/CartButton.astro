@@ -52,19 +52,7 @@ const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
 <script is:inline data-astro-rerun define:vars={{ CMS_URL }}>
 	(function () {
 		const KEY = 'cart_items';
-		const resolveCmsBase = () => {
-			const raw = String(CMS_URL || '').trim().replace(/\/$/, '');
-			if (!raw) return '';
-			try {
-				const u = new URL(raw);
-				const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
-				if (isLoopback) u.hostname = window.location.hostname;
-				return u.origin;
-			} catch {
-				return raw;
-			}
-		};
-		const CMS_BASE = resolveCmsBase();
+		const CMS_BASE = '/cms';
 		const AUTH_KEYS = ['token_pelanggan', 'id_pelanggan', 'user'];
 		const authEls = Array.from(document.querySelectorAll('[data-cart-auth]'));
 		const badges = Array.from(document.querySelectorAll('[data-cart-badge]'));
@@ -81,7 +69,7 @@ const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
 				const raw = window.localStorage.getItem('user');
 				if (!raw) return false;
 				const obj = JSON.parse(raw);
-				return String(obj?.name || '').trim().length > 0;
+				return String(obj && obj.name ? obj.name : '').trim().length > 0;
 			} catch {
 				return false;
 			}
@@ -137,7 +125,6 @@ const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
 		};
 
 		const fetchServerCount = async () => {
-			if (!CMS_BASE) return null;
 			const auth = getAuth();
 			if (!auth.id && !auth.token) return null;
 
@@ -149,9 +136,10 @@ const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
 				},
 			}).catch(() => null);
 			const json = res ? await res.json().catch(() => null) : null;
-			if (!res || !res.ok || !json?.ok) return null;
+			if (!res || !res.ok || !json || !json.ok) return null;
 
-			const items = Array.isArray(json?.data?.items) ? json.data.items : [];
+			const data = json && json.data ? json.data : null;
+			const items = data && Array.isArray(data.items) ? data.items : [];
 			return Math.max(0, Math.trunc(items.length));
 		};
 

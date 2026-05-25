@@ -273,6 +273,25 @@ Route::get('/orders', function (Request $request) {
         return response()->json(['ok' => true, 'data' => $orders]);
     }
 
+    try {
+        if (!$schema->hasColumn('OrderItems', 'review_rating')) {
+            $schema->table('OrderItems', function ($table) {
+                $table->integer('review_rating')->nullable();
+            });
+        }
+        if (!$schema->hasColumn('OrderItems', 'review_comment')) {
+            $schema->table('OrderItems', function ($table) {
+                $table->text('review_comment')->nullable();
+            });
+        }
+        if (!$schema->hasColumn('OrderItems', 'reviewed_at')) {
+            $schema->table('OrderItems', function ($table) {
+                $table->dateTime('reviewed_at')->nullable();
+            });
+        }
+    } catch (\Throwable $e) {
+    }
+
     $orderIds = [];
     foreach ($orders as $o) {
         $orderIds[] = (int) ($o->id_order ?? 0);
@@ -472,12 +491,15 @@ Route::get('/orders', function (Request $request) {
 
         foreach ($grouped as $g) {
             $productId = (int) ($g['product_id'] ?? 0);
+            $variantId = $g['variant_id'] === null ? null : (int) ($g['variant_id'] ?? 0);
             $img = trim((string) ($g['thumbnail'] ?? ''));
             if ($img === '' && $productId > 0) {
                 $img = (string) ($productImageMap[$productId] ?? '');
             }
             $itemsOut[] = [
                 'id' => (int) ($g['id'] ?? 0),
+                'product_id' => $productId,
+                'variant_id' => $variantId,
                 'name' => (string) ($g['name'] ?? ''),
                 'variant' => (string) ($g['variant'] ?? ''),
                 'qty' => (int) max(1, (int) ($g['qty'] ?? 1)),
@@ -522,6 +544,184 @@ Route::get('/orders', function (Request $request) {
     }
 
     return response()->json(['ok' => true, 'data' => $out]);
+});
+
+Route::post('/reviews', function (Request $request) {
+    $header = $request->header('Authorization', '');
+    $idHeader = trim((string) $request->header('X-Pelanggan-Id', ''));
+    $idFromHeader = (int) $idHeader;
+
+    $id = 0;
+    if ($idFromHeader > 0) {
+        $id = $idFromHeader;
+    } else {
+        if (preg_match('/^Bearer\s+(.+)$/i', (string) $header, $m)) {
+            $token = trim((string) ($m[1] ?? ''));
+            if (preg_match('/^pelanggan[:\\-](\\d+)$/i', $token, $m2)) {
+                $id = (int) ($m2[1] ?? 0);
+            } elseif (ctype_digit($token)) {
+                $id = (int) $token;
+            }
+        }
+    }
+
+    if ($id <= 0) {
+        return response()->json(['ok' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $validated = $request->validate([
+        'order_id' => ['required', 'string', 'max:80'],
+        'product_id' => ['required', 'integer', 'min:1'],
+        'variant_id' => ['nullable', 'integer', 'min:1'],
+        'rating' => ['required', 'integer', 'min:1', 'max:5'],
+        'comment' => ['nullable', 'string', 'max:2000'],
+    ]);
+
+    $orderId = trim((string) $validated['order_id']);
+    $productId = (int) $validated['product_id'];
+    $variantId = $validated['variant_id'] === null ? null : (int) $validated['variant_id'];
+    $rating = (int) $validated['rating'];
+    $comment = trim((string) ($validated['comment'] ?? ''));
+    if ($comment === '') $comment = null;
+
+    $conn = DB::connection('sqlite');
+    $schema = $conn->getSchemaBuilder();
+
+    $hasOrders = false;
+    $hasItems = false;
+    $hasProducts = false;
+    try {
+        $hasOrders = $schema->hasTable('Orders');
+        $hasItems = $schema->hasTable('OrderItems');
+        $hasProducts = $schema->hasTable('products');
+    } catch (\Throwable $e) {
+        $hasOrders = false;
+        $hasItems = false;
+        $hasProducts = false;
+    }
+
+    if (!$hasOrders || !$hasItems || !$hasProducts) {
+        return response()->json(['ok' => false, 'message' => 'Data belum siap'], 409);
+    }
+
+    $orderRow = null;
+    if (str_starts_with($orderId, 'ORD-')) {
+        $orderRow = $conn->table('Orders')->where('order_no', $orderId)->where('id_pelanggan', $id)->first();
+    } elseif (preg_match('/^#(\\d+)$/', $orderId, $m)) {
+        $oid = (int) ($m[1] ?? 0);
+        if ($oid > 0) {
+            $orderRow = $conn->table('Orders')->where('id_order', $oid)->where('id_pelanggan', $id)->first();
+        }
+    } else {
+        $orderRow = $conn->table('Orders')->where('order_no', $orderId)->where('id_pelanggan', $id)->first();
+    }
+
+    if (!$orderRow) {
+        return response()->json(['ok' => false, 'message' => 'Order tidak ditemukan'], 404);
+    }
+
+    $status = strtoupper(trim((string) ($orderRow->status ?? '')));
+    if ($status !== 'PAID') {
+        return response()->json(['ok' => false, 'message' => 'Ulasan hanya bisa untuk pesanan PAID'], 409);
+    }
+
+    $hasLine = $conn->table('OrderItems')
+        ->where('id_order', (int) ($orderRow->id_order ?? 0))
+        ->where('product_id', $productId)
+        ->when($variantId !== null, fn ($q) => $q->where('variant_id', $variantId))
+        ->when($variantId === null, fn ($q) => $q->whereNull('variant_id'))
+        ->exists();
+
+    if (!$hasLine) {
+        return response()->json(['ok' => false, 'message' => 'Item order tidak valid'], 422);
+    }
+
+    try {
+        if (!$schema->hasColumn('OrderItems', 'review_rating')) {
+            $schema->table('OrderItems', function ($table) {
+                $table->integer('review_rating')->nullable();
+            });
+        }
+        if (!$schema->hasColumn('OrderItems', 'review_comment')) {
+            $schema->table('OrderItems', function ($table) {
+                $table->text('review_comment')->nullable();
+            });
+        }
+        if (!$schema->hasColumn('OrderItems', 'reviewed_at')) {
+            $schema->table('OrderItems', function ($table) {
+                $table->dateTime('reviewed_at')->nullable();
+            });
+        }
+    } catch (\Throwable $e) {
+    }
+
+    if (!$schema->hasTable('product_reviews')) {
+        $schema->create('product_reviews', function ($table) {
+            $table->bigIncrements('id');
+            $table->integer('id_pelanggan');
+            $table->string('order_id', 80);
+            $table->integer('product_id');
+            $table->integer('variant_id')->nullable();
+            $table->tinyInteger('rating');
+            $table->text('comment')->nullable();
+            $table->dateTime('created_at');
+            $table->dateTime('updated_at')->nullable();
+        });
+    }
+
+    $now = now()->toDateTimeString();
+    $conn->table('OrderItems')
+        ->where('id_order', (int) ($orderRow->id_order ?? 0))
+        ->where('product_id', $productId)
+        ->when($variantId !== null, fn ($q) => $q->where('variant_id', $variantId))
+        ->when($variantId === null, fn ($q) => $q->whereNull('variant_id'))
+        ->update([
+            'review_rating' => $rating,
+            'review_comment' => $comment,
+            'reviewed_at' => $now,
+        ]);
+
+    $existing = $conn->table('product_reviews')
+        ->where('id_pelanggan', $id)
+        ->where('order_id', $orderId)
+        ->where('product_id', $productId)
+        ->when($variantId !== null, fn ($q) => $q->where('variant_id', $variantId))
+        ->when($variantId === null, fn ($q) => $q->whereNull('variant_id'))
+        ->first(['id']);
+
+    if ($existing) {
+        $conn->table('product_reviews')->where('id', (int) ($existing->id ?? 0))->update([
+            'rating' => $rating,
+            'comment' => $comment,
+            'updated_at' => $now,
+        ]);
+    } else {
+        $conn->table('product_reviews')->insert([
+            'id_pelanggan' => $id,
+            'order_id' => $orderId,
+            'product_id' => $productId,
+            'variant_id' => $variantId,
+            'rating' => $rating,
+            'comment' => $comment,
+            'created_at' => $now,
+            'updated_at' => null,
+        ]);
+    }
+
+    $avg = $conn->table('product_reviews')->where('product_id', $productId)->avg('rating');
+    $avgNum = is_numeric($avg) ? (float) $avg : 0.0;
+    $avgRounded = max(0.0, min(5.0, round($avgNum, 1)));
+    $conn->table('products')->where('id', $productId)->update(['rating' => $avgRounded]);
+
+    return response()->json([
+        'ok' => true,
+        'data' => [
+            'product_id' => $productId,
+            'variant_id' => $variantId,
+            'rating' => $rating,
+            'avg_rating' => $avgRounded,
+        ],
+    ]);
 });
 
 Route::get('/cart', function (Request $request) {

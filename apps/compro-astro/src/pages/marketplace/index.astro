@@ -24,8 +24,9 @@ type Product = {
 type ProductView = Product & {
 	sold: number;
 	imageUrl: string;
-	ratingValue: number;
 	isMock: boolean;
+	sizesAvailable: string[];
+	colorsAvailable: string[];
 	size: string;
 	color: string;
 	priceValue: number;
@@ -104,16 +105,40 @@ const categoriesFromApi = Array.from(
 	new Set(products.map((p) => String(p?.category || '').trim()).filter(Boolean)),
 ).sort((a, b) => a.localeCompare(b));
 const categories = categoriesFromApi.length ? categoriesFromApi : ['General'];
-const sizes = ['S', 'M', 'L', 'XL'];
-const colors = ['Black', 'White', 'Grey', 'Ivory'];
-
-function ratingFrom(p: Product) {
-	const v = typeof p.rating === 'number' && Number.isFinite(p.rating) ? p.rating : 0;
-	return Math.max(0, Math.min(5, v));
-}
+const sizesFromApi = Array.from(
+	new Set(
+		products
+			.flatMap((p) => (Array.isArray(p?.variants) ? p.variants : []))
+			.map((v) => String(v?.size ?? '').trim().toUpperCase())
+			.filter(Boolean),
+	),
+).sort((a, b) => a.localeCompare(b));
+const colorsFromApi = Array.from(
+	new Set(
+		products
+			.flatMap((p) => (Array.isArray(p?.variants) ? p.variants : []))
+			.map((v) => String(v?.color ?? '').trim())
+			.filter(Boolean),
+	),
+).sort((a, b) => a.localeCompare(b));
+const sizes = sizesFromApi.length ? sizesFromApi : ['S', 'M', 'L', 'XL'];
+const colors = colorsFromApi.length ? colorsFromApi : ['Black', 'White', 'Grey', 'Ivory'];
 
 const productsView: ProductView[] = products.map((p, idx) => {
-	const ratingValue = ratingFrom(p);
+	const sizesAvailable = Array.from(
+		new Set(
+			(Array.isArray(p?.variants) ? p.variants : [])
+				.map((v) => String(v?.size ?? '').trim().toUpperCase())
+				.filter(Boolean),
+		),
+	);
+	const colorsAvailable = Array.from(
+		new Set(
+			(Array.isArray(p?.variants) ? p.variants : [])
+				.map((v) => String(v?.color ?? '').trim())
+				.filter(Boolean),
+		),
+	);
 	const size = sizes[p.id % sizes.length];
 	const color = colors[p.id % colors.length];
 	const photoNum = (idx % 6) + 1;
@@ -125,9 +150,10 @@ const productsView: ProductView[] = products.map((p, idx) => {
 	return {
 		...p,
 		sold: 20 + ((p.id * 37) % 800),
-		ratingValue,
 		imageUrl,
 		isMock: false,
+		sizesAvailable,
+		colorsAvailable,
 		size,
 		color,
 		priceValue: typeof p.price === 'number' && Number.isFinite(p.price) ? Math.max(0, Math.trunc(p.price)) : rupiahToNumber(p.price_formatted),
@@ -200,13 +226,14 @@ const featuredCollections = [
 					<aside class="reveal-aside h-fit rounded-2xl border border-zinc-200 bg-white/80 p-6 shadow-sm backdrop-blur-md lg:sticky lg:top-24">
 						<div class="flex items-center justify-between gap-3">
 							<div class="text-sm font-semibold text-zinc-900">Filters</div>
-							<button type="button" class="text-xs font-semibold text-zinc-500 hover:text-zinc-900" @click="reset()">Reset</button>
+							<button type="button" data-mkt-filter="reset" class="text-xs font-semibold text-zinc-500 hover:text-zinc-900" @click="reset()">Reset</button>
 						</div>
 
 						<div class="mt-4 space-y-5">
 							<div>
 								<label class="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Search</label>
 								<input
+									data-mkt-filter="search"
 									x-model="search"
 									@input.debounce.150ms="apply()"
 									placeholder="Search Avenue Collective..."
@@ -222,6 +249,7 @@ const featuredCollections = [
 											<span class="flex items-center gap-3">
 												<input
 													type="checkbox"
+													data-mkt-filter="category"
 													class="h-4 w-4 rounded border-zinc-300 text-black focus:ring-black/20"
 													x-model="selectedCategories"
 													value={c}
@@ -239,20 +267,14 @@ const featuredCollections = [
 								<div class="mt-3 grid gap-2">
 									<label class="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-white px-3 py-2 text-sm text-zinc-700">
 										<span class="flex items-center gap-3">
-											<input type="checkbox" class="h-4 w-4 rounded border-zinc-300 text-black focus:ring-black/20" x-model="activeFilters.new" @change="apply()" />
+											<input type="checkbox" data-mkt-filter="new" class="h-4 w-4 rounded border-zinc-300 text-black focus:ring-black/20" x-model="activeFilters.new" @change="apply()" />
 											<span class="font-medium">New</span>
 										</span>
 									</label>
 									<label class="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-white px-3 py-2 text-sm text-zinc-700">
 										<span class="flex items-center gap-3">
-											<input type="checkbox" class="h-4 w-4 rounded border-zinc-300 text-black focus:ring-black/20" x-model="activeFilters.sale" @change="apply()" />
+											<input type="checkbox" data-mkt-filter="sale" class="h-4 w-4 rounded border-zinc-300 text-black focus:ring-black/20" x-model="activeFilters.sale" @change="apply()" />
 											<span class="font-medium">Sale</span>
-										</span>
-									</label>
-									<label class="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-white px-3 py-2 text-sm text-zinc-700">
-										<span class="flex items-center gap-3">
-											<input type="checkbox" class="h-4 w-4 rounded border-zinc-300 text-black focus:ring-black/20" x-model="activeFilters.rating" @change="apply()" />
-											<span class="font-medium">⭐ 4.5+</span>
 										</span>
 									</label>
 								</div>
@@ -260,18 +282,8 @@ const featuredCollections = [
 
 							<div class="grid gap-4">
 								<div>
-									<label class="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Size</label>
-									<select x-model="size" @change="apply()" class="mt-2 h-11 w-full rounded-xl border border-zinc-100 bg-zinc-50 px-3 text-sm text-zinc-900 shadow-sm outline-none focus:bg-white focus:ring-2 focus:ring-zinc-900/10">
-										<option value="">All</option>
-										<option value="S">S</option>
-										<option value="M">M</option>
-										<option value="L">L</option>
-										<option value="XL">XL</option>
-									</select>
-								</div>
-								<div>
 									<label class="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Color</label>
-									<select x-model="color" @change="apply()" class="mt-2 h-11 w-full rounded-xl border border-zinc-100 bg-zinc-50 px-3 text-sm text-zinc-900 shadow-sm outline-none focus:bg-white focus:ring-2 focus:ring-zinc-900/10">
+									<select data-mkt-filter="color" x-model="color" @change="apply()" class="mt-2 h-11 w-full rounded-xl border border-zinc-100 bg-zinc-50 px-3 text-sm text-zinc-900 shadow-sm outline-none focus:bg-white focus:ring-2 focus:ring-zinc-900/10">
 										<option value="">All</option>
 										<option value="Black">Black</option>
 										<option value="White">White</option>
@@ -281,12 +293,32 @@ const featuredCollections = [
 								</div>
 								<div>
 									<label class="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Price</label>
-									<select x-model="price" @change="apply()" class="mt-2 h-11 w-full rounded-xl border border-zinc-100 bg-zinc-50 px-3 text-sm text-zinc-900 shadow-sm outline-none focus:bg-white focus:ring-2 focus:ring-zinc-900/10">
-										<option value="">All</option>
-										<option value="0-15000">Rp 0 - 15rb</option>
-										<option value="15000-25000">Rp 15rb - 25rb</option>
-										<option value="25000-999999">Rp 25rb+</option>
-									</select>
+									<div class="mt-2 grid grid-cols-2 gap-2">
+										<div class="flex h-11 items-center overflow-hidden rounded-xl border border-zinc-100 bg-zinc-50 shadow-sm focus-within:bg-white focus-within:ring-2 focus-within:ring-zinc-900/10">
+											<span class="px-3 text-xs font-semibold text-zinc-500">Rp</span>
+											<input
+												type="text"
+												inputmode="numeric"
+												data-mkt-filter="priceMin"
+												x-model="priceMin"
+												@input.debounce.150ms="apply()"
+												placeholder="Min"
+												class="h-11 w-full border-0 bg-transparent pr-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
+											/>
+										</div>
+										<div class="flex h-11 items-center overflow-hidden rounded-xl border border-zinc-100 bg-zinc-50 shadow-sm focus-within:bg-white focus-within:ring-2 focus-within:ring-zinc-900/10">
+											<span class="px-3 text-xs font-semibold text-zinc-500">Rp</span>
+											<input
+												type="text"
+												inputmode="numeric"
+												data-mkt-filter="priceMax"
+												x-model="priceMax"
+												@input.debounce.150ms="apply()"
+												placeholder="Max"
+												class="h-11 w-full border-0 bg-transparent pr-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
+											/>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -363,7 +395,8 @@ const featuredCollections = [
 												data-new={String(isNew)}
 												data-sale={String(isSale)}
 												data-price-value={String(p.priceValue)}
-												data-rating={String(p.ratingValue)}
+												data-sizes={p.sizesAvailable.join('|')}
+												data-colors={p.colorsAvailable.join('|')}
 												data-size={p.size}
 												data-color={p.color}
 												class="reveal-card group flex h-full flex-col rounded-2xl border border-zinc-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
@@ -387,17 +420,11 @@ const featuredCollections = [
 
 													<div class="flex flex-col flex-1">
 														<div class="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">{p.category}</div>
-														<div class="mt-1 min-h-[2.75rem] text-lg font-semibold leading-tight text-zinc-900 line-clamp-2">{p.title}</div>
+														<div class="mt-1 text-lg font-semibold leading-snug text-zinc-900 break-words whitespace-normal">{p.title}</div>
 
-														<div class="mt-2 mb-4 flex items-center justify-between gap-3">
+														<div class="mt-2 mb-4">
 															<div class="text-xl font-bold text-zinc-900 whitespace-nowrap">
 																<span class="whitespace-nowrap">{p.price_formatted}</span>
-															</div>
-															<div class="inline-flex items-center gap-1.5 text-sm text-zinc-500">
-																<svg class="h-4 w-4 text-zinc-900" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-																	<path d="M12 17.27 18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27Z" />
-																</svg>
-																<span>{p.ratingValue.toFixed(1)}</span>
 															</div>
 														</div>
 													</div>
@@ -482,7 +509,7 @@ const featuredCollections = [
 
 							<div class="min-w-0 flex flex-col gap-5 p-6 md:p-10">
 								<div class="flex flex-col gap-1">
-									<h3 class="text-2xl font-semibold tracking-tight text-zinc-900 line-clamp-2" x-text="product?.title"></h3>
+									<h3 class="text-2xl font-semibold tracking-tight text-zinc-900 break-words whitespace-normal" x-text="product?.title"></h3>
 									<p class="text-3xl font-bold text-zinc-900" x-text="getDisplayPrice()"></p>
 								</div>
 
@@ -554,10 +581,10 @@ const featuredCollections = [
 				return {
 					search: String(initialSearch || ''),
 					selectedCategories: [],
-					activeFilters: { new: false, sale: false, rating: false },
-					size: '',
+					activeFilters: { new: false, sale: false },
 					color: '',
-					price: '',
+					priceMin: '',
+					priceMax: '',
 					init() {
 						this.apply();
 					},
@@ -568,39 +595,42 @@ const featuredCollections = [
 					reset() {
 						this.search = '';
 						this.selectedCategories = [];
-						this.activeFilters = { new: false, sale: false, rating: false };
-						this.size = '';
+						this.activeFilters = { new: false, sale: false };
 						this.color = '';
-						this.price = '';
+						this.priceMin = '';
+						this.priceMax = '';
 						this.apply();
 					},
 					apply() {
+						const parseMoney = (v) => {
+							const digits = String(v || '').replace(/[^\d]/g, '');
+							if (!digits) return null;
+							const n = Number(digits);
+							return Number.isFinite(n) ? n : null;
+						};
+
 						const search = String(this.search || '').trim().toLowerCase();
-						const selectedCategories = Array.isArray(this.selectedCategories) ? this.selectedCategories.map(String) : [];
+						const selectedCategories = Array.isArray(this.selectedCategories)
+							? this.selectedCategories.map((x) => String(x || '').trim().toLowerCase()).filter(Boolean)
+							: [];
 						const showNew = !!this.activeFilters.new;
 						const showSale = !!this.activeFilters.sale;
-						const showRating = !!this.activeFilters.rating;
-						const size = String(this.size || '').trim();
 						const color = String(this.color || '').trim();
-						const price = String(this.price || '').trim();
-
-						let minPrice = null;
-						let maxPrice = null;
-						if (price.includes('-')) {
-							const [a, b] = price.split('-');
-							minPrice = Number(a) || null;
-							maxPrice = Number(b) || null;
-						}
+						const minPrice = parseMoney(this.priceMin);
+						const maxPrice = parseMoney(this.priceMax);
 
 						const cards = Array.from(document.querySelectorAll('[data-product-card]'));
 						let shown = 0;
 
 						for (const card of cards) {
 							const title = String(card.getAttribute('data-title-search') || '');
-							const cat = String(card.getAttribute('data-category') || '');
+							const cat = String(card.getAttribute('data-category') || '').trim().toLowerCase();
 							const isNew = String(card.getAttribute('data-new') || '') === 'true';
 							const isSale = String(card.getAttribute('data-sale') || '') === 'true';
-							const cardRating = Number(card.getAttribute('data-rating') || '0');
+							const cardSizesRaw = String(card.getAttribute('data-sizes') || '');
+							const cardColorsRaw = String(card.getAttribute('data-colors') || '');
+							const cardSizes = cardSizesRaw ? cardSizesRaw.split('|').map((x) => String(x || '').trim()).filter(Boolean) : [];
+							const cardColors = cardColorsRaw ? cardColorsRaw.split('|').map((x) => String(x || '').trim()).filter(Boolean) : [];
 							const cardSize = String(card.getAttribute('data-size') || '');
 							const cardColor = String(card.getAttribute('data-color') || '');
 							const cardPrice = Number(card.getAttribute('data-price-value') || '0');
@@ -610,9 +640,13 @@ const featuredCollections = [
 							if (selectedCategories.length && !selectedCategories.includes(cat)) visible = false;
 							if (showNew && !isNew) visible = false;
 							if (showSale && !isSale) visible = false;
-							if (showRating && cardRating < 4.5) visible = false;
-							if (size && cardSize !== size) visible = false;
-							if (color && cardColor !== color) visible = false;
+							if (color) {
+								if (cardColors.length > 0) {
+									if (!cardColors.includes(color)) visible = false;
+								} else if (cardColor !== color) {
+									visible = false;
+								}
+							}
 							if (minPrice !== null && cardPrice < minPrice) visible = false;
 							if (maxPrice !== null && cardPrice > maxPrice) visible = false;
 
@@ -632,6 +666,125 @@ const featuredCollections = [
 					}
 				};
 			};
+
+			(function () {
+				const root = document.querySelector('#products');
+				if (!root) return;
+
+				const alpineRoot = document.querySelector('[x-data^="fashionMarketplace"]');
+				if (alpineRoot && alpineRoot.__x) return;
+
+				const read = () => {
+					const search = String(root.querySelector('[data-mkt-filter="search"]')?.value || '').trim().toLowerCase();
+					const selectedCategories = Array.from(root.querySelectorAll('input[data-mkt-filter="category"]:checked'))
+						.map((el) => String(el.value || '').trim().toLowerCase())
+						.filter(Boolean);
+					const showNew = !!root.querySelector('input[data-mkt-filter="new"]')?.checked;
+					const showSale = !!root.querySelector('input[data-mkt-filter="sale"]')?.checked;
+					const color = String(root.querySelector('[data-mkt-filter="color"]')?.value || '').trim();
+					const priceMin = String(root.querySelector('[data-mkt-filter="priceMin"]')?.value || '').trim();
+					const priceMax = String(root.querySelector('[data-mkt-filter="priceMax"]')?.value || '').trim();
+					return { search, selectedCategories, showNew, showSale, color, priceMin, priceMax };
+				};
+
+				const apply = () => {
+					const parseMoney = (v) => {
+						const digits = String(v || '').replace(/[^\d]/g, '');
+						if (!digits) return null;
+						const n = Number(digits);
+						return Number.isFinite(n) ? n : null;
+					};
+
+					const { search, selectedCategories, showNew, showSale, color, priceMin, priceMax } = read();
+					const minPrice = parseMoney(priceMin);
+					const maxPrice = parseMoney(priceMax);
+
+					const cards = Array.from(document.querySelectorAll('[data-product-card]'));
+					let shown = 0;
+
+					for (const card of cards) {
+						const title = String(card.getAttribute('data-title-search') || '');
+						const cat = String(card.getAttribute('data-category') || '').trim().toLowerCase();
+						const isNew = String(card.getAttribute('data-new') || '') === 'true';
+						const isSale = String(card.getAttribute('data-sale') || '') === 'true';
+						const cardSizesRaw = String(card.getAttribute('data-sizes') || '');
+						const cardColorsRaw = String(card.getAttribute('data-colors') || '');
+						const cardSizes = cardSizesRaw ? cardSizesRaw.split('|').map((x) => String(x || '').trim()).filter(Boolean) : [];
+						const cardColors = cardColorsRaw ? cardColorsRaw.split('|').map((x) => String(x || '').trim()).filter(Boolean) : [];
+						const cardSize = String(card.getAttribute('data-size') || '');
+						const cardColor = String(card.getAttribute('data-color') || '');
+						const cardPrice = Number(card.getAttribute('data-price-value') || '0');
+
+						let visible = true;
+						if (search && !title.includes(search)) visible = false;
+						if (selectedCategories.length && !selectedCategories.includes(cat)) visible = false;
+						if (showNew && !isNew) visible = false;
+						if (showSale && !isSale) visible = false;
+						if (color) {
+							if (cardColors.length > 0) {
+								if (!cardColors.includes(color)) visible = false;
+							} else if (cardColor !== color) {
+								visible = false;
+							}
+						}
+						if (minPrice !== null && cardPrice < minPrice) visible = false;
+						if (maxPrice !== null && cardPrice > maxPrice) visible = false;
+
+						if (visible) {
+							card.classList.remove('hidden');
+							shown += 1;
+						} else {
+							card.classList.add('hidden');
+						}
+					}
+
+					const countEl = document.getElementById('products-count');
+					if (countEl) countEl.textContent = String(shown);
+
+					const emptyEl = document.getElementById('products-empty');
+					if (emptyEl) emptyEl.classList.toggle('hidden', shown !== 0);
+				};
+
+				let t = 0;
+				const schedule = () => {
+					window.clearTimeout(t);
+					t = window.setTimeout(apply, 120);
+				};
+
+				const bind = () => {
+					root.querySelector('[data-mkt-filter="search"]')?.addEventListener('input', schedule);
+					for (const el of root.querySelectorAll('input[data-mkt-filter="category"]')) el.addEventListener('change', apply);
+					root.querySelector('input[data-mkt-filter="new"]')?.addEventListener('change', apply);
+					root.querySelector('input[data-mkt-filter="sale"]')?.addEventListener('change', apply);
+					root.querySelector('[data-mkt-filter="color"]')?.addEventListener('change', apply);
+					root.querySelector('[data-mkt-filter="priceMin"]')?.addEventListener('input', schedule);
+					root.querySelector('[data-mkt-filter="priceMax"]')?.addEventListener('input', schedule);
+					root.querySelector('[data-mkt-filter="reset"]')?.addEventListener('click', () => {
+						const search = root.querySelector('[data-mkt-filter="search"]');
+						if (search) search.value = '';
+						for (const el of root.querySelectorAll('input[data-mkt-filter="category"]')) el.checked = false;
+						const isNew = root.querySelector('input[data-mkt-filter="new"]');
+						if (isNew) isNew.checked = false;
+						const isSale = root.querySelector('input[data-mkt-filter="sale"]');
+						if (isSale) isSale.checked = false;
+						const color = root.querySelector('[data-mkt-filter="color"]');
+						if (color) color.value = '';
+						const priceMin = root.querySelector('[data-mkt-filter="priceMin"]');
+						if (priceMin) priceMin.value = '';
+						const priceMax = root.querySelector('[data-mkt-filter="priceMax"]');
+						if (priceMax) priceMax.value = '';
+						apply();
+					});
+				};
+
+				bind();
+				apply();
+
+				document.addEventListener('astro:page-load', () => {
+					bind();
+					apply();
+				});
+			})();
 		</script>
 
 		<script is:inline data-astro-rerun define:vars={{ CMS_URL }}>
