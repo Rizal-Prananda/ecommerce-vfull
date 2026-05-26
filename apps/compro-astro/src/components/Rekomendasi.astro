@@ -53,7 +53,7 @@ const CMS_URL = Astro.props.CMS_URL ?? import.meta.env.PUBLIC_CMS_URL ?? 'http:/
 		(() => {
 			const wrap = document.getElementById('rekomWrap');
 			if (!wrap) return;
-			const apiUrl = `${CMS_URL.replace(/\/$/, '')}/api/recommendations`;
+			const apiUrl = '/cms/api/recommendations';
 			fetch(apiUrl)
 				.then((r) => r.json())
 				.then((json) => {

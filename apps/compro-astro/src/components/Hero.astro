@@ -124,22 +124,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001';
 		};
 
 		const resolveCmsBase = () => {
-			const raw = String(CMS_URL || '').trim().replace(/\/$/, '');
-			if (!raw) {
-				const h = String(window.location.hostname || '').trim().toLowerCase();
-				if (h === 'localhost' || h === '127.0.0.1') {
-					return `${window.location.protocol}//${window.location.hostname}:8001`;
-				}
-				return '';
-			}
-			try {
-				const u = new URL(raw);
-				const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
-				if (isLoopback) u.hostname = window.location.hostname;
-				return u.origin;
-			} catch {
-				return raw;
-			}
+		return window.location.origin;
 		};
 		const cmsBase = resolveCmsBase();
 		const hero = heroes[0];
@@ -147,10 +132,20 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001';
 		const resolveAssetUrl = (raw) => {
 			const v = String(raw || '').trim();
 			if (!v) return '';
-			if (/^https?:\/\//i.test(v)) return v;
-			if (v.startsWith('/product-media/')) return cmsBase ? `${cmsBase}${v}` : v;
-			if (v.startsWith('/')) return v;
-			return cmsBase ? `${cmsBase}/${v}` : v;
+		if (/^https?:\/\//i.test(v)) {
+			try {
+				const u = new URL(v);
+				if (u.pathname.startsWith('/product-media/') || u.pathname.startsWith('/storage/') || u.pathname.startsWith('/uploads/')) {
+					return `/cms${u.pathname}${u.search}`;
+				}
+			} catch {}
+			return v;
+		}
+			if (v.startsWith('/product-media/')) return `${cmsBase}/cms${v}`;
+			if (v.startsWith('/storage/')) return `${cmsBase}/cms${v}`;
+		if (v.startsWith('/uploads/')) return `${cmsBase}/cms${v}`;
+			if (v.startsWith('/')) return `${cmsBase}${v}`;
+			return `${cmsBase}/${v}`;
 		};
 
 		const getLayers = () => {
@@ -274,7 +269,7 @@ const CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001';
 		const fetchSetting = async (key, signal) => {
 			try {
 				const res = await fetch(
-					`${cmsBase}/api/site-settings/${encodeURIComponent(key)}`,
+					`${cmsBase}/cms/api/site-settings/${encodeURIComponent(key)}`,
 					{ credentials: 'omit', cache: 'no-store', signal }
 				);
 				const json = await res.json().catch(() => null);

@@ -101,16 +101,7 @@ const { CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001' } = 
 			let slides = [];
 
 			const resolveCmsBase = () => {
-				const raw = String(cmsUrl || '').trim();
-				if (!raw) return '';
-				try {
-					const u = new URL(raw);
-					const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
-					if (isLoopback) u.hostname = window.location.hostname;
-					return u.origin;
-				} catch {
-					return raw.replace(/\/$/, '');
-				}
+				return window.location.origin;
 			};
 
 			const cmsBase = resolveCmsBase();
@@ -118,10 +109,20 @@ const { CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001' } = 
 			const normalizeUrl = (url) => {
 				const v = String(url || '').trim();
 				if (!v) return '';
-				if (/^https?:\/\//i.test(v)) return v;
-				if (v.startsWith('/product-media/')) return cmsBase ? `${cmsBase}${v}` : v;
-				if (v.startsWith('/')) return cmsBase ? `${cmsBase}${v}` : v;
-				return cmsBase ? `${cmsBase}/${v}` : v;
+				if (/^https?:\/\//i.test(v)) {
+					try {
+						const u = new URL(v);
+						if (u.pathname.startsWith('/product-media/') || u.pathname.startsWith('/storage/') || u.pathname.startsWith('/uploads/')) {
+							return `/cms${u.pathname}${u.search}`;
+						}
+					} catch {}
+					return v;
+				}
+				if (v.startsWith('/product-media/')) return `${cmsBase}/cms${v}`;
+				if (v.startsWith('/storage/')) return `${cmsBase}/cms${v}`;
+				if (v.startsWith('/uploads/')) return `${cmsBase}/cms${v}`;
+				if (v.startsWith('/')) return `${cmsBase}${v}`;
+				return `${cmsBase}/${v}`;
 			};
 
 			const applyPhotos = (list) => {
@@ -162,7 +163,7 @@ const { CMS_URL = import.meta.env.PUBLIC_CMS_URL ?? 'http://127.0.0.1:8001' } = 
 			const loadPhotos = async () => {
 				if (!cmsBase) return;
 				try {
-					const resp = await fetch(`${cmsBase}/api/site-settings/about_photos`, { cache: 'no-store' });
+					const resp = await fetch(`${cmsBase}/cms/api/site-settings/about_photos`, { cache: 'no-store' });
 					const json = await resp.json().catch(() => null);
 					const raw = json && json.data ? json.data.value : null;
 

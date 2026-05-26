@@ -53,11 +53,20 @@ Route::get('/product-media/{path}', function (string $path) {
         abort(404);
     }
 
-    if (!Storage::disk('public')->exists($path)) {
+    if (Storage::disk('public')->exists($path)) {
+        return Storage::disk('public')->response($path, null, [
+            'Cache-Control' => 'public, max-age=604800',
+        ]);
+    }
+
+    // Backward compatibility: some older uploads were stored under storage/app/{path}
+    // instead of the public disk, but marketplace URLs still point to /product-media/...
+    $legacyPath = storage_path('app/' . $path);
+    if (!File::exists($legacyPath)) {
         abort(404);
     }
 
-    return Storage::disk('public')->response($path, null, [
+    return response()->file($legacyPath, [
         'Cache-Control' => 'public, max-age=604800',
     ]);
 })->where('path', '.*');

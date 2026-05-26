@@ -30,7 +30,7 @@ export default function FloatingChat() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string>("");
 
-  const CMS_BASE = "http://127.0.0.1:8001";
+  const CMS_BASE = "/cms";
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const lastIdRef = useRef<number>(0);
